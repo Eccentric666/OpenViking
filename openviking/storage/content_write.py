@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 
 from openviking.server.identity import RequestContext
 from openviking.session.memory.utils.content import deserialize_full, serialize_with_metadata
+from openviking.storage.plugins.plugin_chain import PreWritePluginChain
 from openviking.storage.queuefs import SemanticMsg, get_queue_manager
 from openviking.storage.queuefs.semantic_processor import SemanticProcessor
 from openviking.storage.transaction import get_lock_manager
@@ -31,6 +32,7 @@ class ContentWriteCoordinator:
 
     def __init__(self, viking_fs: VikingFS):
         self._viking_fs = viking_fs
+        self._plugin_chain = PreWritePluginChain()
 
     async def write(
         self,
@@ -156,9 +158,31 @@ class ContentWriteCoordinator:
         mode: str,
         ctx: RequestContext,
     ) -> None:
-        if mode == "replace" and self._context_type_for_uri(uri) == "memory":
+        context_type = self._context_type_for_uri(uri)
+
+        if mode == "replace" and context_type == "memory":
             existing_raw = await self._viking_fs.read_file(uri, ctx=ctx)
-            _, metadata = deserialize_full(existing_raw)
+            existing_content, metadata = deserialize_full(existing_raw)
+
+            logger.info(
+                "[ContentWriteCoordinator] memory replace uri=%s, "
+                "existing_content_len=%d, has_metadata=%s",
+                uri,
+                len(existing_content),
+                metadata is not None,
+            )
+
+            # PreWritePlugin preprocess (on pure content)
+            plugin_before_len = len(content)
+            content = await self._plugin_chain.process(uri, content, ctx)
+            if len(content) != plugin_before_len:
+                logger.info(
+                    "[ContentWriteCoordinator] Plugin transformed content: "
+                    "%d -> %d chars",
+                    plugin_before_len,
+                    len(content),
+                )
+
             if metadata:
                 content = serialize_with_metadata(content, metadata)
             await self._viking_fs.write_file(uri, content, ctx=ctx)
@@ -167,13 +191,56 @@ class ContentWriteCoordinator:
         if mode == "append":
             existing_raw = await self._viking_fs.read_file(uri, ctx=ctx)
             existing_content, metadata = deserialize_full(existing_raw)
+
+            logger.info(
+                "[ContentWriteCoordinator] append uri=%s, "
+                "existing_len=%d, append_len=%d",
+                uri,
+                len(existing_content),
+                len(content),
+            )
+
+            # append: merge first, then preprocess merged content
             updated_content = existing_content + content
+
+            # PreWritePlugin preprocess
+            plugin_before_len = len(updated_content)
+            updated_content = await self._plugin_chain.process(uri, updated_content, ctx)
+            if len(updated_content) != plugin_before_len:
+                logger.info(
+                    "[ContentWriteCoordinator] Plugin transformed appended content: "
+                    "%d -> %d chars",
+                    plugin_before_len,
+                    len(updated_content),
+                )
+
             if metadata:
                 updated_raw = serialize_with_metadata(updated_content, metadata)
             else:
                 updated_raw = updated_content
             await self._viking_fs.write_file(uri, updated_raw, ctx=ctx)
             return
+
+        # Normal replace (non-memory)
+        logger.info(
+            "[ContentWriteCoordinator] replace uri=%s, "
+            "context_type=%s, content_len=%d",
+            uri,
+            context_type,
+            len(content),
+        )
+
+        # PreWritePlugin preprocess
+        plugin_before_len = len(content)
+        content = await self._plugin_chain.process(uri, content, ctx)
+        if len(content) != plugin_before_len:
+            logger.info(
+                "[ContentWriteCoordinator] Plugin transformed content: "
+                "%d -> %d chars",
+                plugin_before_len,
+                len(content),
+            )
+
         await self._viking_fs.write_file(uri, content, ctx=ctx)
 
     async def _prepare_temp_write(

@@ -18,6 +18,7 @@ from .consts import (
     OPENVIKING_CONFIG_ENV,
     SYSTEM_CONFIG_DIR,
 )
+from .compressor_config import ToolCompressorConfig
 from .embedding_config import EmbeddingConfig
 from .encryption_config import EncryptionConfig
 from .telemetry_config import TelemetryConfig
@@ -160,6 +161,11 @@ class OpenVikingConfig(BaseModel):
         description="Prompt template configuration",
     )
 
+    tool_compressor: ToolCompressorConfig = Field(
+        default_factory=lambda: ToolCompressorConfig(),
+        description="Tool output compression configuration",
+    )
+
     model_config = {"arbitrary_types_allowed": True, "extra": "forbid"}
 
     @classmethod
@@ -218,6 +224,11 @@ class OpenVikingConfig(BaseModel):
             if "memory" in config_copy:
                 memory_config_data = config_copy.pop("memory")
 
+            # Handle tool_compressor configuration from nested "tool_compressor" section
+            tool_compressor_data = None
+            if "tool_compressor" in config_copy:
+                tool_compressor_data = config_copy.pop("tool_compressor")
+
             instance = cls(**config_copy)
 
             # Apply log configuration
@@ -227,6 +238,10 @@ class OpenVikingConfig(BaseModel):
             # Apply memory configuration
             if memory_config_data is not None:
                 instance.memory = MemoryConfig.from_dict(memory_config_data)
+
+            # Apply tool_compressor configuration
+            if tool_compressor_data is not None:
+                instance.tool_compressor = ToolCompressorConfig.from_dict(tool_compressor_data)
 
             # Apply parser configurations
             for parser_type, parser_data in parser_configs.items():
