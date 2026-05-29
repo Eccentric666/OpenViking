@@ -194,6 +194,7 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 openviking/bin/
+openviking/lib/
 third_party/agfs/bin/
 test_scripts/
 examples/data/
@@ -202,3 +203,10 @@ specs/
 .trae/
 .codex/
 .ttadk/
+/benchmark/native_p0_eval
+/benchmark/memrouter_ov_e2e
+/benchmark/locomo_e2e
+
+# Local VectorDB fallback generated/kept for source-tree benchmark runs.
+# The wheel normally ships native engine binaries; this file is not part of the MemRouter fast-path change.
+openviking/storage/vectordb/engine/_x86_sse3.py

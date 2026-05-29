@@ -3,7 +3,7 @@
 """Search endpoints for OpenViking HTTP Server."""
 
 import math
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -111,6 +111,31 @@ class GlobRequest(BaseModel):
     node_limit: Optional[int] = None
 
 
+class TypedQueryDict(BaseModel):
+    """Sub-model for MemRouter-provided TypedQuery."""
+
+    query: str = ""
+    context_type: Optional[str] = None
+    intent: str = ""
+    priority: int = 1
+    target_directories: Optional[List[str]] = None
+
+
+class ExecuteInstructionRequest(BaseModel):
+    """Request model for MemRouter fast-path execute_instruction."""
+
+    query: str
+    search_mode: str = "find"
+    target_uri: str = ""
+    context_type: Optional[str] = None
+    limit: int = 10
+    score_threshold: Optional[float] = None
+    filter: Optional[Dict[str, Any]] = None
+    skip_intent_analysis: bool = False
+    typed_query: Optional[TypedQueryDict] = None
+    telemetry: TelemetryRequest = False
+
+
 @router.post("/find")
 async def find(
     request: FindRequest,
@@ -186,6 +211,57 @@ async def search(
     result = execution.result
     if hasattr(result, "to_dict"):
         result = result.to_dict(include_provenance=request.include_provenance)
+    result = _sanitize_floats(result)
+    return Response(
+        status="ok",
+        result=result,
+        telemetry=execution.telemetry,
+    ).model_dump(exclude_none=True)
+
+
+@router.post("/execute_instruction")
+async def execute_instruction(
+    request: ExecuteInstructionRequest,
+    _ctx: RequestContext = Depends(get_request_context),
+):
+    """Execute a MemRouter-generated BackendQueryInstruction.
+
+    Fast path: when ``skip_intent_analysis=true`` and ``typed_query`` is
+    present, bypasses the native ``IntentAnalyzer`` and uses the
+    MemRouter-provided ``TypedQuery`` directly.
+    """
+    service = get_service()
+
+    instruction = {
+        "query": request.query,
+        "search_mode": request.search_mode,
+        "target_uri": request.target_uri,
+        "context_type": request.context_type,
+        "limit": request.limit,
+        "score_threshold": request.score_threshold,
+        "filter": request.filter,
+        "skip_intent_analysis": request.skip_intent_analysis,
+    }
+    if request.typed_query:
+        instruction["typed_query"] = {
+            "query": request.typed_query.query,
+            "context_type": request.typed_query.context_type,
+            "intent": request.typed_query.intent,
+            "priority": request.typed_query.priority,
+            "target_directories": request.typed_query.target_directories,
+        }
+
+    execution = await run_operation(
+        operation="search.execute_instruction",
+        telemetry=request.telemetry,
+        fn=lambda: service.search.execute_instruction(
+            instruction=instruction,
+            ctx=_ctx,
+        ),
+    )
+    result = execution.result
+    if hasattr(result, "to_dict"):
+        result = result.to_dict()
     result = _sanitize_floats(result)
     return Response(
         status="ok",

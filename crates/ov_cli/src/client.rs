@@ -125,7 +125,9 @@ impl HttpClient {
             .connect_timeout(std::time::Duration::from_secs(30))
             .timeout(std::time::Duration::from_secs(1800))
             .build()
-            .map_err(|e| Error::Network(format!("Failed to build long-timeout HTTP client: {}", e)))?;
+            .map_err(|e| {
+                Error::Network(format!("Failed to build long-timeout HTTP client: {}", e))
+            })?;
 
         let response = long_timeout_client
             .post(&url)
@@ -1094,11 +1096,15 @@ mod tests {
         let headers = client.build_headers();
 
         assert_eq!(
-            headers.get("X-Custom-Header").and_then(|value| value.to_str().ok()),
+            headers
+                .get("X-Custom-Header")
+                .and_then(|value| value.to_str().ok()),
             Some("custom-value")
         );
         assert_eq!(
-            headers.get("Authorization").and_then(|value| value.to_str().ok()),
+            headers
+                .get("Authorization")
+                .and_then(|value| value.to_str().ok()),
             Some("Bearer token")
         );
     }

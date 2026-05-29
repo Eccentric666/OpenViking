@@ -62,6 +62,12 @@ class ChatResponse(BaseModel):
     events: Optional[List[Dict[str, Any]]] = Field(
         default=None, description="Intermediate events (thinking, tool calls)"
     )
+    relevant_memories: Optional[str] = Field(
+        default=None, description="Relevant memories retrieved during processing"
+    )
+    usage: Optional[Dict[str, Any]] = Field(
+        default=None, description="Token usage statistics"
+    )
     timestamp: datetime = Field(default_factory=datetime.now, description="Response timestamp")
 
 

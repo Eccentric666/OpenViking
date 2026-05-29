@@ -57,6 +57,7 @@ pub async fn search(
     output_success(&result, output_format, compact);
     Ok(())
 }
+
 pub async fn grep(
     client: &HttpClient,
     uri: &str,

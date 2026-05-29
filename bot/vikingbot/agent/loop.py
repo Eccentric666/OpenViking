@@ -239,12 +239,14 @@ class AgentLoop:
                     if response:
                         await self.bus.publish_outbound(response)
                 except Exception as e:
-                    logger.exception(f"Error processing message: {e}")
+                    # Protect against GBK/emoji encoding errors on Windows console
+                    safe_err = str(e).encode("utf-8", errors="replace").decode("utf-8")
+                    logger.exception(f"Error processing message: {safe_err}")
                     # Send error response
                     await self.bus.publish_outbound(
                         OutboundMessage(
                             session_key=msg.session_key,
-                            content=f"Sorry, I encountered an error: {str(e)}",
+                            content=f"Sorry, I encountered an error: {safe_err}",
                             metadata=msg.metadata,
                         )
                     )
@@ -636,10 +638,26 @@ class AgentLoop:
                 tools_used_names = [tool["tool_name"] for tool in tools_used]
             else:
                 tools_used_names = []
+            # Extract relevant memories: prefer full content text over tool result URIs
+            metadata = dict(msg.metadata or {})
+            if hasattr(message_context, "memory"):
+                mem_contents = getattr(message_context.memory, "last_search_contents", "")
+                if mem_contents:
+                    metadata["relevant_memories"] = mem_contents[:4000]
+                else:
+                    # Fallback: tool results (JSON with URIs) or raw URI list
+                    for tool in (tools_used or []):
+                        if tool.get("tool_name") == "openviking_search" and tool.get("result"):
+                            metadata["relevant_memories"] = str(tool["result"])[:4000]
+                            break
+                    if "relevant_memories" not in metadata:
+                        raw_memories = getattr(message_context.memory, "last_search_results", [])
+                        if raw_memories:
+                            metadata["relevant_memories"] = "\n".join(raw_memories)[:4000]
             return OutboundMessage(
                 session_key=msg.session_key,
                 content=final_content,
-                metadata=msg.metadata,
+                metadata=metadata,
                 token_usage=token_usage,
                 time_cost=time_cost,
                 iteration=iteration,

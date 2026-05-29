@@ -106,3 +106,28 @@ class SearchService:
             filter=filter,
         )
         return result
+
+    async def execute_instruction(
+        self,
+        instruction: Dict[str, Any],
+        ctx: RequestContext,
+    ) -> Any:
+        """Execute a MemRouter-generated BackendQueryInstruction.
+
+        Fast path: when ``skip_intent_analysis=true`` and ``typed_query`` is
+        present, bypasses the native ``IntentAnalyzer`` and uses the
+        MemRouter-provided ``TypedQuery`` directly.
+
+        Args:
+            instruction: Dict representation of ``BackendQueryInstruction``.
+            ctx: Request context for access control.
+
+        Returns:
+            FindResult with the same shape as ``find()`` / ``search()``.
+        """
+        viking_fs = self._ensure_initialized()
+        result = await viking_fs.execute_instruction(
+            instruction=instruction,
+            ctx=ctx,
+        )
+        return result

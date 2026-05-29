@@ -18,6 +18,8 @@ class MemoryStore:
         self.memory_dir = ensure_dir(workspace / "memory")
         self.memory_file = self.memory_dir / "MEMORY.md"
         self.history_file = self.memory_dir / "HISTORY.md"
+        self.last_search_results: list[str] = []
+        self.last_search_contents: str = ""
 
     def read_long_term(self) -> str:
         if self.memory_file.exists():
@@ -137,6 +139,18 @@ class MemoryStore:
             if not result:
                 return ""
 
+            # Collect raw search result URIs for downstream (e.g. relevant_memories)
+            raw_uris = []
+            for mem in result.get("user_memory", []):
+                uri = getattr(mem, "uri", "")
+                if uri:
+                    raw_uris.append(uri)
+            for mem in result.get("agent_memory", []):
+                uri = getattr(mem, "uri", "")
+                if uri:
+                    raw_uris.append(uri)
+            self.last_search_results = raw_uris
+
             # Log raw search results for debugging
             memory_list = []
             memory_list.append(f'user_memory[{len(result['user_memory'])}]:')
@@ -149,7 +163,10 @@ class MemoryStore:
             logger.info(f"[RAW_MEMORIES]\n{'\n'.join(memory_list)}")
             user_memory = await self._parse_viking_memory(result["user_memory"], client, min_score=0.35)
             agent_memory = await self._parse_viking_memory(result["agent_memory"], client, min_score=0.35, max_chars=2000)
-            return f"### user memories:\n{user_memory}\n### agent memories:\n{agent_memory}"
+            full_context = f"### user memories:\n{user_memory}\n### agent memories:\n{agent_memory}"
+            # Store formatted memory content (with actual text) for downstream reporting
+            self.last_search_contents = full_context[:6000]
+            return full_context
         except Exception as e:
             logger.error(f"[READ_USER_MEMORY]: search error. {e}")
             return ""

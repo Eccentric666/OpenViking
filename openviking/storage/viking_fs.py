@@ -1083,6 +1083,172 @@ class VikingFS:
         telemetry.set("vector.returned", find_result.total)
         return find_result
 
+    async def execute_instruction(
+        self,
+        instruction: Dict[str, Any],
+        ctx: Optional[RequestContext] = None,
+    ):
+        """Execute a MemRouter-generated BackendQueryInstruction directly.
+
+        Fast path: when ``skip_intent_analysis=true`` and ``typed_query`` is
+        present, bypasses the native ``IntentAnalyzer`` and uses the
+        MemRouter-provided ``TypedQuery`` directly.  Otherwise falls back to
+        the same logic as :meth:`find`.
+
+        Args:
+            instruction: Dict representation of ``BackendQueryInstruction``.
+                Expected keys::
+
+                    query, target_uri, context_type, limit, score_threshold,
+                    filter, skip_intent_analysis, typed_query
+            ctx: Optional request context for access control.
+
+        Returns:
+            FindResult with the same shape as ``find()`` / ``search()``.
+        """
+        telemetry = get_current_telemetry()
+        from openviking.retrieve.hierarchical_retriever import HierarchicalRetriever
+        from openviking_cli.retrieve import (
+            ContextType,
+            FindResult,
+            TypedQuery,
+        )
+
+        query_text = instruction.get("query", "")
+        target_uri = instruction.get("target_uri", "")
+        _search_mode = instruction.get("search_mode", "find")
+        limit = instruction.get("limit", 10)
+        score_threshold = instruction.get("score_threshold")
+        filter_dsl = instruction.get("filter")
+        skip_ia = instruction.get("skip_intent_analysis", False)
+        typed_query_data = instruction.get("typed_query")
+
+        # If MemRouter asks for native OpenViking search and does not provide a
+        # fast-path typed query, delegate to ``search()`` so OpenViking can run
+        # its own IntentAnalyzer when session_info is available. Current
+        # MemRouter OpenViking templates keep skip_intent_analysis=true, so
+        # they still use the fast path below.
+        if _search_mode == "search" and not (skip_ia and typed_query_data):
+            return await self.search(
+                query=query_text,
+                target_uri=target_uri,
+                session_info=instruction.get("session_info"),
+                limit=limit,
+                score_threshold=score_threshold,
+                filter=filter_dsl,
+                ctx=ctx,
+            )
+
+        if target_uri and target_uri not in {"/", "viking://"}:
+            try:
+                target_uri = canonicalize_uri(target_uri, self._ctx_or_default(ctx))
+            except NamespaceShapeError as exc:
+                raise InvalidArgumentError(str(exc)) from exc
+            self._ensure_access(target_uri, ctx)
+
+        storage = self._get_vector_store()
+        if not storage:
+            raise RuntimeError("Vector store not initialized. Call OpenViking.initialize() first.")
+
+        embedder = self._get_embedder()
+        if not embedder:
+            raise RuntimeError("Embedder not configured.")
+
+        retriever = HierarchicalRetriever(
+            storage=storage,
+            embedder=embedder,
+            rerank_config=self.rerank_config,
+        )
+
+        real_ctx = self._ctx_or_default(ctx)
+
+        # Fast path - use MemRouter-provided TypedQuery, skip IntentAnalyzer
+        if skip_ia and typed_query_data:
+            context_type_str = (
+                typed_query_data.get("context_type")
+                or instruction.get("context_type")
+            )
+            if context_type_str:
+                try:
+                    context_type = ContextType(context_type_str)
+                except ValueError as exc:
+                    # Fast path: reject invalid context_type to surface protocol bugs early
+                    raise InvalidArgumentError(
+                        f"Invalid context_type for fast path: {context_type_str!r}"
+                    ) from exc
+            else:
+                context_type = self._infer_context_type(target_uri) if target_uri else None
+
+            target_dirs = typed_query_data.get("target_directories")
+            if target_dirs:
+                # Canonicalize and access-check each external target directory
+                canonical_dirs: List[str] = []
+                for d in target_dirs:
+                    if not d or d in {"/", "viking://"}:
+                        continue
+                    try:
+                        cd = canonicalize_uri(d, real_ctx)
+                    except NamespaceShapeError as exc:
+                        raise InvalidArgumentError(str(exc)) from exc
+                    self._ensure_access(cd, ctx)
+                    canonical_dirs.append(cd)
+                target_dirs = canonical_dirs
+            elif target_uri:
+                target_dirs = [target_uri]
+
+            # Fall back to raw query if MemRouter provides an empty query string
+            typed_query_text = typed_query_data.get("query") or query_text
+
+            typed_query = TypedQuery(
+                query=typed_query_text,
+                context_type=context_type,
+                intent=typed_query_data.get("intent", ""),
+                priority=typed_query_data.get("priority", 1),
+                target_directories=target_dirs or [],
+            )
+        else:
+            # Fallback — same logic as find()
+            context_type = self._infer_context_type(target_uri) if target_uri else None
+            typed_query = TypedQuery(
+                query=query_text,
+                context_type=context_type,
+                intent="",
+                target_directories=[target_uri] if target_uri else None,
+            )
+
+        logger.debug(
+            "[VikingFS.execute_instruction] fast_path=%s intent=%s priority=%s ctx=%s",
+            skip_ia and bool(typed_query_data),
+            typed_query.intent,
+            typed_query.priority,
+            real_ctx.account_id if real_ctx else None,
+        )
+
+        result = await retriever.retrieve(
+            typed_query,
+            ctx=real_ctx,
+            limit=limit,
+            score_threshold=score_threshold,
+            scope_dsl=filter_dsl,
+        )
+
+        memories, resources, skills = [], [], []
+        for c in result.matched_contexts:
+            if c.context_type == ContextType.MEMORY:
+                memories.append(c)
+            elif c.context_type == ContextType.RESOURCE:
+                resources.append(c)
+            elif c.context_type == ContextType.SKILL:
+                skills.append(c)
+
+        find_result = FindResult(
+            memories=memories,
+            resources=resources,
+            skills=skills,
+        )
+        telemetry.set("vector.returned", find_result.total)
+        return find_result
+
     async def search(
         self,
         query: str,

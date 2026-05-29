@@ -1,9 +1,9 @@
+use crate::CliContext;
 use crate::client;
 use crate::commands;
 use crate::config::merge_csv_options;
 use crate::error::{Error, Result};
 use crate::tui;
-use crate::CliContext;
 
 pub async fn handle_add_resource(
     mut path: String,
@@ -327,8 +327,22 @@ pub async fn handle_admin(cmd: AdminCommands, ctx: CliContext) -> Result<()> {
             )
             .await
         }
-        AdminCommands::ListUsers { account_id, limit, name, role } => {
-            commands::admin::list_users(&client, &account_id, limit, name, role, ctx.output_format, ctx.compact).await
+        AdminCommands::ListUsers {
+            account_id,
+            limit,
+            name,
+            role,
+        } => {
+            commands::admin::list_users(
+                &client,
+                &account_id,
+                limit,
+                name,
+                role,
+                ctx.output_format,
+                ctx.compact,
+            )
+            .await
         }
         AdminCommands::RemoveUser {
             account_id,
@@ -452,7 +466,12 @@ pub async fn handle_write(
     .await
 }
 
-pub async fn handle_reindex(uri: String, regenerate: bool, wait: bool, ctx: CliContext) -> Result<()> {
+pub async fn handle_reindex(
+    uri: String,
+    regenerate: bool,
+    wait: bool,
+    ctx: CliContext,
+) -> Result<()> {
     let client = ctx.get_client();
     commands::content::reindex(
         &client,
@@ -714,7 +733,12 @@ pub async fn handle_grep(
     .await
 }
 
-pub async fn handle_glob(pattern: String, uri: String, node_limit: i32, ctx: CliContext) -> Result<()> {
+pub async fn handle_glob(
+    pattern: String,
+    uri: String,
+    node_limit: i32,
+    ctx: CliContext,
+) -> Result<()> {
     let params = vec![
         format!("--uri={}", uri),
         format!("-n {}", node_limit),

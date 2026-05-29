@@ -105,10 +105,10 @@ class VikingClient:
         return hashlib.md5(f"{user_id}:{self.agent_id}".encode()).hexdigest()[:12]
 
     async def find(self, query: str, target_uri: Optional[str] = None):
-        """搜索资源"""
+        """搜索资源（重定向到 search：带意图分析 / 会话上下文 / 查询扩展）"""
         if target_uri:
-            return await self.client.find(query, target_uri=target_uri)
-        return await self.client.find(query)
+            return await self.client.search(query, target_uri=target_uri)
+        return await self.client.search(query)
 
     async def add_resource(self, local_path: str, desc: str) -> Optional[Dict[str, Any]]:
         """添加资源到 Viking"""
@@ -171,10 +171,10 @@ class VikingClient:
         result = await self.read_content(uri=uri, level="read")
         return result
 
-    async def search(self, query: str, target_uri: Optional[str] = "") -> Dict[str, Any]:
+    async def search(self, query: str, target_uri: Optional[str] = "", limit: int = 10) -> Dict[str, Any]:
         # session = self.client.session()
 
-        result = await self.client.search(query, target_uri=target_uri)
+        result = await self.client.search(query, target_uri=target_uri, limit=limit)
 
         # 将 FindResult 对象转换为 JSON map
         return {
@@ -316,22 +316,17 @@ class VikingClient:
                 "agent_memory": [],
             }
         # Step 3: 用户存在，查询记忆
-        uri_user_memory = f"viking://user/{user_id}/memories/"
-        user_memory = await self.client.find(
+        # NOTE: target_uri restrictions cause 0 results due to OpenViking scope bug.
+        # Remove target_uri to search across all indexed memories (user, agent, skills, resources).
+        result = await self.client.search(
             query=query,
-            target_uri=uri_user_memory,
+            target_uri="",
             limit=limit,
         )
-        agent_space_name = self.get_agent_space_name(agent_user_id)
-        uri_agent_memory = f"viking://agent/{agent_space_name}/memories/"
-        agent_memory = await self.client.find(
-            query=query,
-            target_uri=uri_agent_memory,
-            limit=limit,
-        )
+        memories = result.memories if hasattr(result, "memories") else []
         return {
-            "user_memory": user_memory.memories if hasattr(user_memory, "memories") else [],
-            "agent_memory": agent_memory.memories if hasattr(agent_memory, "memories") else [],
+            "user_memory": memories,
+            "agent_memory": memories,
         }
 
     async def grep(

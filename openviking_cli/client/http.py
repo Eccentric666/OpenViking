@@ -623,6 +623,53 @@ class AsyncHTTPClient(BaseClient):
         response_data = self._handle_response_data(response)
         return FindResult.from_dict(response_data.get("result") or {})
 
+    async def execute_instruction(
+        self,
+        instruction: Dict[str, Any],
+        telemetry: TelemetryRequest = False,
+    ) -> FindResult:
+        """Execute a MemRouter-generated BackendQueryInstruction.
+
+        Fast path: when ``skip_intent_analysis=true`` and ``typed_query`` is
+        present, bypasses the native ``IntentAnalyzer``.
+        """
+        telemetry = self._validate_telemetry(telemetry)
+        payload = {
+            "query": instruction.get("query", ""),
+            "search_mode": instruction.get("search_mode", "find"),
+            "target_uri": instruction.get("target_uri", ""),
+            "context_type": instruction.get("context_type"),
+            "limit": instruction.get("limit", 10),
+            "score_threshold": instruction.get("score_threshold"),
+            "filter": instruction.get("filter"),
+            "skip_intent_analysis": instruction.get("skip_intent_analysis", False),
+            "telemetry": telemetry,
+        }
+        typed_query = instruction.get("typed_query")
+        if typed_query:
+            payload["typed_query"] = {
+                "query": typed_query.get("query", ""),
+                "context_type": typed_query.get("context_type"),
+                "intent": typed_query.get("intent", ""),
+                "priority": typed_query.get("priority", 1),
+                "target_directories": typed_query.get("target_directories"),
+            }
+        response = await self._http.post(
+            "/api/v1/search/execute_instruction",
+            json=payload,
+        )
+        # Preserve HTTP status code on endpoint-missing errors so that
+        # MemRouterVikingClient can detect old servers and fallback safely.
+        if not response.is_success and response.status_code in {404, 405, 501}:
+            exc = OpenVikingError(
+                f"HTTP {response.status_code}: execute_instruction endpoint not available",
+                code="UNKNOWN",
+            )
+            exc.status_code = response.status_code
+            raise exc
+        response_data = self._handle_response_data(response)
+        return FindResult.from_dict(response_data.get("result") or {})
+
     async def search(
         self,
         query: str,
