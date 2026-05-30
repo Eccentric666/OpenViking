@@ -703,6 +703,39 @@ class AsyncHTTPClient(BaseClient):
         response_data = self._handle_response_data(response)
         return FindResult.from_dict(response_data.get("result") or {})
 
+    async def sm_recall(
+        self,
+        query: str,
+        session_id: Optional[str] = None,
+        limit: int = 10,
+        scope: str = "auto",
+    ) -> Dict[str, Any]:
+        """Streamlined Memory recall via sidecar HTTP endpoint.
+
+        Calls the Streamlined Memory sidecar (configured via ``base_url``)
+        to recall observations matching the query.
+        """
+        response = await self._http.post(
+            "/api/v1/sessions/streamlined-memory/recall",
+            json={
+                "query": query,
+                "session_id": session_id,
+                "limit": limit,
+                "scope": scope,
+                "view": "compact",
+            },
+        )
+        # Preserve HTTP status code on endpoint-missing errors so that
+        # MemRouterVikingClient can detect unavailability and fallback safely.
+        if not response.is_success and response.status_code in {404, 405, 501}:
+            exc = OpenVikingError(
+                f"HTTP {response.status_code}: streamlined-memory/recall endpoint not available",
+                code="UNKNOWN",
+            )
+            exc.status_code = response.status_code
+            raise exc
+        return self._handle_response(response)
+
     async def grep(
         self,
         uri: str,

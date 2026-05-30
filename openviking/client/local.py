@@ -344,6 +344,73 @@ class LocalClient(BaseClient):
             execution.telemetry,
         )
 
+    async def sm_recall(
+        self,
+        query: str,
+        session_id: Optional[str] = None,
+        limit: int = 10,
+        scope: str = "auto",
+    ) -> Dict[str, Any]:
+        """Streamlined Memory recall (local/embedded mode).
+
+        Attempts to use the recall engine directly if a database path is
+        configured in the service config; otherwise returns a fallback.
+        """
+        import logging
+        from pathlib import Path
+
+        from openviking.streamlined_memory.recall import StreamlinedMemoryRecall
+
+        logger = logging.getLogger(__name__)
+
+        # Try to find db_path from service config
+        db_path = None
+        try:
+            config = getattr(self._service, "_config", None)
+            if config:
+                sm_config = getattr(config.server, "streamlined_memory", None)
+                if sm_config:
+                    db_path = getattr(sm_config, "db_path", None)
+        except Exception:
+            pass
+
+        if not db_path or not Path(db_path).exists():
+            logger.warning(
+                "Streamlined Memory db not configured or not found (db_path=%s); "
+                "returning empty recall",
+                db_path,
+            )
+            return {
+                "recalled": False,
+                "ok": False,
+                "enabled": False,
+                "state_block": "",
+                "local_timeline": [],
+                "diagnostics": {"fallback_reason": "db_not_configured"},
+            }
+
+        try:
+            recall = StreamlinedMemoryRecall(db_path)
+            result = recall.recall(query, session_id=session_id, limit=limit, scope=scope)
+            return {
+                "recalled": result.recalled,
+                "ok": result.recalled,
+                "enabled": True,
+                "state_block": result.state_block,
+                "local_timeline": result.local_timeline,
+                "diagnostics": result.diagnostics,
+            }
+        except Exception as exc:
+            logger.warning("Local sm_recall failed: %s", exc)
+            return {
+                "recalled": False,
+                "ok": False,
+                "enabled": True,
+                "state_block": "",
+                "local_timeline": [],
+                "diagnostics": {"fallback_reason": f"recall_error: {exc}"},
+            }
+
     async def grep(
         self,
         uri: str,

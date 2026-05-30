@@ -177,6 +177,20 @@ class BaseClient(ABC):
         ...
 
     @abstractmethod
+    async def sm_recall(
+        self,
+        query: str,
+        session_id: Optional[str] = None,
+        limit: int = 10,
+        scope: str = "auto",
+    ) -> Dict[str, Any]:
+        """Streamlined Memory recall: query the lightweight SQLite-backed memory sidecar.
+
+        Returns a dict with keys: recalled, state_block, local_timeline, diagnostics.
+        """
+        ...
+
+    @abstractmethod
     async def grep(
         self,
         uri: str,

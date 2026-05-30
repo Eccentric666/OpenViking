@@ -318,3 +318,96 @@ async def record_used(
             "skills_used": session.stats.skills_used,
         },
     )
+
+
+# ============= Streamlined Memory endpoints =============
+
+class StreamlinedMemoryRecallRequest(BaseModel):
+    """Request body for Streamlined Memory recall."""
+
+    query: str
+    session_id: Optional[str] = None
+    scope: str = "auto"
+    view: str = "compact"
+    limit: int = 10
+    recall_intent: str = "resume_task"
+
+
+class StreamlinedMemoryRecallResponse(BaseModel):
+    """Response from Streamlined Memory recall."""
+
+    recalled: bool
+    ok: bool
+    enabled: bool = True
+    state_block: str = ""
+    local_timeline: list = []
+    resolved_thread: dict = {}
+    diagnostics: dict = {}
+
+
+@router.post("/streamlined-memory/recall", response_model=StreamlinedMemoryRecallResponse)
+async def streamlined_memory_recall(
+    request: StreamlinedMemoryRecallRequest,
+    _ctx: RequestContext = Depends(get_request_context),
+):
+    """Global Streamlined Memory recall (no session required).
+
+    Queries the Streamlined Memory sidecar (SQLite-backed observation store)
+    and returns a state_block assembled from matching observations.
+    """
+    import os
+    from pathlib import Path
+
+    from openviking.streamlined_memory.recall import StreamlinedMemoryRecall
+
+    # Determine db_path from config or environment
+    db_path = None
+    try:
+        service = get_service()
+        config = getattr(service, "_config", None)
+        if config:
+            sm_config = getattr(config.server, "streamlined_memory", None)
+            if sm_config:
+                db_path = getattr(sm_config, "db_path", None)
+    except Exception:
+        pass
+
+    if not db_path:
+        db_path = os.environ.get("STREAMLINED_MEMORY_DB_PATH")
+
+    if not db_path or not Path(db_path).exists():
+        logger.warning("Streamlined Memory db not found: %s", db_path)
+        return StreamlinedMemoryRecallResponse(
+            recalled=False,
+            ok=False,
+            enabled=False,
+            state_block="",
+            diagnostics={"fallback_reason": "db_not_found", "db_path": str(db_path)},
+        )
+
+    try:
+        recall = StreamlinedMemoryRecall(db_path)
+        result = recall.recall(
+            query=request.query,
+            session_id=request.session_id,
+            limit=request.limit,
+            scope=request.scope,
+        )
+        return StreamlinedMemoryRecallResponse(
+            recalled=result.recalled,
+            ok=result.recalled,
+            enabled=True,
+            state_block=result.state_block,
+            local_timeline=result.local_timeline,
+            resolved_thread={},
+            diagnostics=result.diagnostics,
+        )
+    except Exception as exc:
+        logger.exception("Streamlined Memory recall failed")
+        return StreamlinedMemoryRecallResponse(
+            recalled=False,
+            ok=False,
+            enabled=True,
+            state_block="",
+            diagnostics={"fallback_reason": f"recall_error: {exc}"},
+        )
