@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, model_validator
 from openviking_cli.utils.logger import get_logger
 
 from .agfs_config import AGFSConfig
+from .graph_db_config import GraphDatabaseConfig
 from .transaction_config import TransactionConfig
 from .vectordb_config import VectorDBBackendConfig
 
@@ -34,6 +35,11 @@ class StorageConfig(BaseModel):
     vectordb: VectorDBBackendConfig = Field(
         default_factory=VectorDBBackendConfig,
         description="VectorDB backend configuration",
+    )
+
+    graphdb: GraphDatabaseConfig = Field(
+        default_factory=GraphDatabaseConfig,
+        description="Graph database configuration",
     )
 
     params: Dict[str, Any] = Field(

@@ -14,12 +14,13 @@ from vikingbot.utils.helpers import ensure_dir
 class MemoryStore:
     """Two-layer memory: MEMORY.md (long-term facts) + HISTORY.md (grep-searchable log)."""
 
-    def __init__(self, workspace: Path):
+    def __init__(self, workspace: Path, client: Any = None):
         self.memory_dir = ensure_dir(workspace / "memory")
         self.memory_file = self.memory_dir / "MEMORY.md"
         self.history_file = self.memory_dir / "HISTORY.md"
         self.last_search_results: list[str] = []
         self.last_search_contents: str = ""
+        self._client = client  # Injected client (e.g. MemRouterVikingClient) or None
 
     def read_long_term(self) -> str:
         if self.memory_file.exists():
@@ -132,7 +133,15 @@ class MemoryStore:
             logger.info(f'workspace_id={workspace_id}')
             logger.info(f'user_id={user_id}')
             logger.info(f'admin_user_id={admin_user_id}')
-            client = await VikingClient.create(agent_id=workspace_id)
+            if self._client is not None:
+                client = self._client
+                logger.info(
+                    "[Layer 0] MemoryStore using injected client: %s",
+                    type(client).__name__,
+                )
+            else:
+                client = await VikingClient.create(agent_id=workspace_id)
+                logger.info("[Layer 0] MemoryStore using native VikingClient (fallback)")
             result = await client.search_memory(
                 query=current_message, user_id=user_id, agent_user_id=admin_user_id, limit=30
             )

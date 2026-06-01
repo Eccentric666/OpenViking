@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import time
 from contextlib import AsyncExitStack
@@ -26,6 +27,7 @@ from vikingbot.hooks import HookContext
 from vikingbot.hooks.manager import hook_manager
 from vikingbot.providers.base import LLMProvider
 from vikingbot.sandbox import SandboxManager
+from vikingbot.openviking_mount.ov_server import VikingClient
 from vikingbot.session.manager import SessionManager
 from vikingbot.utils.helpers import cal_str_tokens
 from vikingbot.utils.tracing import trace
@@ -138,6 +140,9 @@ class AgentLoop:
         self._mcp_connecting = False
         self._register_default_tools()
 
+        # Unified VikingClient / MemRouterVikingClient for Layer 0 + Layer 1
+        self._viking_client: Any = None
+
     async def _connect_mcp(self) -> None:
         """Connect to configured MCP servers (one-time, lazy, retryable on failure).
 
@@ -173,6 +178,42 @@ class AgentLoop:
                 pass  # MCP SDK cancel scope cleanup is noisy but harmless
             self._mcp_stack = None
         self._mcp_connected = False
+
+    async def _ensure_viking_client(self) -> Any:
+        """Lazy-init unified VikingClient (or MemRouterVikingClient when enabled).
+
+        Returns a shared client instance used by both Layer 0 (pre-retrieval
+        via ContextBuilder -> MemoryStore) and Layer 1 (tool call via
+        VikingSearchTool). The instance is created once and reused across
+        messages to avoid re-initialising the MemRouter pipeline on every
+        search_memory call.
+        """
+        if self._viking_client is not None:
+            return self._viking_client
+
+        base_client = await VikingClient.create(agent_id="default")
+
+        if os.environ.get("MEMROUTER_ENABLED", "false").lower() == "true":
+            import sys
+            from pathlib import Path
+
+            echomem_path = os.environ.get(
+                "ECHOMEM_PATH",
+                r"D:\Code\cursorProject\EchoMem",
+            )
+            if echomem_path not in sys.path:
+                sys.path.insert(0, echomem_path)
+
+            from echomem.agent_sdk.memrouter_viking_client import MemRouterVikingClient
+
+            self._viking_client = MemRouterVikingClient(viking_client=base_client)
+            await self._viking_client.initialize()
+            logger.info("AgentLoop: MemRouterVikingClient initialised (Layer 0 + Layer 1)")
+        else:
+            self._viking_client = base_client
+            logger.info("AgentLoop: VikingClient initialised (native, no MemRouter)")
+
+        return self._viking_client
 
     async def _publish_thinking_event(
         self, session_key: SessionKey, event_type: OutboundEventType, content: str
@@ -341,6 +382,9 @@ class AgentLoop:
                 )
 
                 # Stage 2: Execute all tools in parallel
+                # Ensure shared VikingClient is available for tool execution
+                tool_viking_client = await self._ensure_viking_client()
+
                 async def execute_single_tool(idx: int, tool_call):
                     """Execute a single tool and track execution time."""
                     tool_execute_start_time = time.time()
@@ -350,6 +394,7 @@ class AgentLoop:
                         session_key=session_key,
                         sandbox_manager=self.sandbox_manager,
                         sender_id=sender_id,
+                        viking_client=tool_viking_client,
                     )
                     tool_execute_duration = (time.time() - tool_execute_start_time) * 1000
                     return idx, tool_call, result, tool_execute_duration
@@ -587,6 +632,7 @@ class AgentLoop:
 
             from vikingbot.agent.context import ContextBuilder
 
+            viking_client = await self._ensure_viking_client()
             message_context = ContextBuilder(
                 message_workspace,
                 sandbox_manager=self.sandbox_manager,
@@ -594,6 +640,7 @@ class AgentLoop:
                 sender_name=msg.sender_name,
                 is_group_chat=is_group_chat,
                 eval=self._eval,
+                viking_client=viking_client,
             )
 
             # Build initial messages (use get_history for LLM-formatted messages)

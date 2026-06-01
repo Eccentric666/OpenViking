@@ -108,28 +108,69 @@ class StreamlinedMemoryRecall:
         """Build an FTS5 query from natural language query.
 
         Escapes FTS5 special characters and joins tokens with AND.
+        Aggressively filters stopwords, short tokens, and pure numbers
+        (trigram tokenizer does not index digits well).
         """
-        # Remove common question words and punctuation
-        stopwords = {"when", "did", "what", "where", "who", "how", "the", "a", "an",
-                     "is", "was", "were", "are", "to", "of", "in", "on", "at", "for",
-                     "with", "about", "from", "by", "and", "or", "?", ".", ",", "!"}
+        import re
+
+        stopwords = {
+            "when", "did", "what", "where", "who", "how", "which", "why",
+            "the", "a", "an", "this", "that", "these", "those", "his", "her",
+            "their", "its", "my", "your", "our",
+            "is", "was", "were", "are", "be", "been", "being",
+            "have", "has", "had", "do", "does", "did", "can", "could",
+            "would", "should", "will", "shall", "may", "might", "must",
+            "to", "of", "in", "on", "at", "for", "with", "about", "from",
+            "by", "and", "or", "as", "into", "through", "during", "before",
+            "after", "above", "below", "up", "down", "out", "off", "over",
+            "under", "again", "further", "then", "once", "here", "there",
+            "i", "you", "he", "she", "it", "we", "they", "me", "him",
+            "them", "us", "myself", "yourself", "himself", "herself",
+            "itself", "ourselves", "yourselves", "themselves",
+            "not", "no", "yes", "so", "if", "than", "then", "now",
+            "also", "only", "just", "even", "too", "very", "much",
+            "many", "more", "most", "some", "any", "all", "both",
+            "each", "every", "other", "another", "such", "same",
+            "different", "new", "old", "good", "bad", "big", "small",
+            "long", "short", "high", "low", "right", "left", "first",
+            "last", "next", "previous", "early", "late", "own",
+            "still", "well", "back", "way", "own", "same", "well",
+            "?", ".", ",", "!", ";", ":",
+        }
+
+        def _is_valid_token(t: str) -> bool:
+            if not t or t in stopwords:
+                return False
+            if len(t) <= 3:
+                return False
+            if re.match(r"^\d+$", t):  # trigram tokenizer does not index digits
+                return False
+            return True
+
         tokens = []
         for token in query.lower().split():
             token = token.strip(".,?!;:\"'")
-            if token and token not in stopwords and len(token) > 2:
-                # Escape FTS5 special characters
+            if _is_valid_token(token):
                 token = token.replace('"', '""')
                 tokens.append(f'"{token}"')
+
         if not tokens:
-            # Fallback: use all non-stopword tokens
+            # Fallback: relax constraints, still exclude pure numbers
             for token in query.lower().split():
                 token = token.strip(".,?!;:\"'")
-                if token and len(token) > 2:
+                if token and len(token) > 2 and not re.match(r"^\d+$", token):
                     token = token.replace('"', '""')
                     tokens.append(f'"{token}"')
+
         if not tokens:
-            return query.replace('"', '""')
-        return " AND ".join(tokens[:8])  # Limit to top 8 tokens
+            # Last resort: return a single non-numeric word, or empty
+            for token in query.lower().split():
+                token = token.strip(".,?!;:\"'")
+                if token and not re.match(r"^\d+$", token) and len(token) > 1:
+                    return token.replace('"', '""')
+            return ""
+
+        return " AND ".join(tokens[:6])  # Limit to top 6 tokens
 
     def _search_observations(
         self,
@@ -172,29 +213,49 @@ class StreamlinedMemoryRecall:
         except sqlite3.OperationalError as exc:
             logger.warning("FTS5 search failed (%s), falling back to title LIKE", exc)
 
-        # Fast fallback: search only title column (indexed, much faster)
+        # Fast fallback: search both title and content columns
         # Extract the first meaningful token for LIKE
         tokens = [t.strip('"') for t in fts_query.split(" AND ") if len(t.strip('"')) > 2]
         if not tokens:
             return []
 
-        conditions = []
+        title_conditions = []
+        content_conditions = []
         params = []
         for token in tokens[:3]:  # Use top 3 tokens
-            conditions.append("title LIKE ?")
+            title_conditions.append("title LIKE ?")
+            content_conditions.append("content LIKE ?")
             params.append(f"%{token}%")
+            params.append(f"%{token}%")  # duplicate for content
 
-        where_clause = " OR ".join(conditions)
+        where_parts = []
+        if title_conditions:
+            where_parts.append("(" + " OR ".join(title_conditions) + ")")
+        if content_conditions:
+            where_parts.append("(" + " OR ".join(content_conditions) + ")")
+        where_clause = " OR ".join(where_parts)
+
         if session_id:
             where_clause = f"session_id = ? AND ({where_clause})"
             params = [session_id] + params
 
-        params.append(limit)
+        params.append(limit * 2)  # fetch more for dedup
         cursor.execute(
             f"SELECT * FROM observations WHERE {where_clause} ORDER BY created_at DESC LIMIT ?",
             params,
         )
-        return cursor.fetchall()
+        rows = cursor.fetchall()
+        # Deduplicate by rowid (in case title+content matches the same row)
+        seen = set()
+        unique_rows = []
+        for row in rows:
+            rid = row["rowid"]
+            if rid not in seen:
+                seen.add(rid)
+                unique_rows.append(row)
+                if len(unique_rows) >= limit:
+                    break
+        return unique_rows
 
     @staticmethod
     def _build_timeline(observations: List[sqlite3.Row]) -> List[Dict[str, Any]]:

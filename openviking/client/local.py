@@ -411,6 +411,34 @@ class LocalClient(BaseClient):
                 "diagnostics": {"fallback_reason": f"recall_error: {exc}"},
             }
 
+    async def search_graph_text(
+        self,
+        query: str,
+        top_k: int = 10,
+    ) -> str:
+        """Graph Memory text search (local/embedded mode).
+
+        Delegates to the search service's graph formatter, which uses the
+        existing vector store (Qdrant/AGFS) as the underlying retrieval.
+        """
+        execution = await run_with_telemetry(
+            operation="search.graph_text",
+            telemetry=False,
+            fn=lambda: self._service.search.search_graph_text(
+                query=query,
+                ctx=self._ctx,
+                top_k=top_k,
+            ),
+        )
+        result = attach_telemetry_payload(
+            execution.result,
+            execution.telemetry,
+        )
+        # result may be a string or a dict-wrapped string
+        if isinstance(result, dict):
+            return str(result.get("result") or result.get("text", ""))
+        return str(result)
+
     async def grep(
         self,
         uri: str,

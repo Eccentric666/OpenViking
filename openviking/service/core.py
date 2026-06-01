@@ -79,6 +79,7 @@ class OpenVikingService:
         self._directory_initializer: Optional[DirectoryInitializer] = None
         self._watch_scheduler: Optional[WatchScheduler] = None
         self._encryptor: Optional[Any] = None
+        self._graph_manager: Optional[Any] = None
 
         # Sub-services
         self._fs_service = FSService()
@@ -166,6 +167,11 @@ class OpenVikingService:
     def lock_manager(self) -> Optional[LockManager]:
         """Get LockManager instance."""
         return self._lock_manager
+
+    @property
+    def graph_manager(self) -> Optional[Any]:
+        """Get GraphManager instance."""
+        return self._graph_manager
 
     @property
     def session_compressor(self) -> Optional[SessionCompressor]:
@@ -273,6 +279,62 @@ class OpenVikingService:
         if enable_recorder:
             logger.info("VikingFS IO Recorder enabled")
 
+        # ---- Initialize graph pipeline ----
+        if config.storage.graphdb.enabled:
+            try:
+                from openviking.storage.graphdb import GraphManager
+                from openviking.storage.graphdb.extractors import (
+                    EntityExtractor,
+                    RelationExtractor,
+                )
+                from openviking.storage.graphdb.graph_handler import GraphHandler
+                from openviking.storage.graphdb.writers import (
+                    GraphWriter,
+                    NodeDeduplicator,
+                )
+
+                self._graph_manager = GraphManager(
+                    neo4j_uri=config.storage.graphdb.uri,
+                    neo4j_username=config.storage.graphdb.username,
+                    neo4j_password=config.storage.graphdb.password,
+                    neo4j_database=config.storage.graphdb.database,
+                    confidence_threshold=config.storage.graphdb.confidence_threshold,
+                )
+                await self._graph_manager.initialize()
+
+                entity_extractor = EntityExtractor(
+                    llm_provider=config.vlm.get_vlm_instance(),
+                    embedder=self._embedder,
+                )
+                relation_extractor = RelationExtractor(
+                    llm_provider=config.vlm.get_vlm_instance(),
+                    confidence_threshold=config.storage.graphdb.confidence_threshold,
+                )
+                graph_writer = GraphWriter(
+                    backend=self._graph_manager.backend,
+                    deduplicator=NodeDeduplicator(self._graph_manager.backend),
+                )
+                graph_handler = GraphHandler(
+                    entity_extractor=entity_extractor,
+                    relation_extractor=relation_extractor,
+                    graph_writer=graph_writer,
+                )
+                self._queue_manager.setup_graph_queue(graph_handler)
+
+                # Initialize retriever
+                await self._graph_manager.initialize_retriever(
+                    self._embedder, entity_extractor
+                )
+
+                # Wire SearchService to GraphManager
+                self._search_service.set_graph_manager(self._graph_manager)
+
+                logger.info("Graph pipeline initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize graph pipeline: {e}")
+                self._graph_manager = None
+        # ---- Graph pipeline end ----
+
         # Start queue workers now that VikingFS is ready.
         # Doing it here (rather than in _init_storage) ensures that any tasks
         # recovered from a previous crash are not processed before VikingFS is
@@ -350,6 +412,11 @@ class OpenVikingService:
         if self._lock_manager:
             await self._lock_manager.stop()
             self._lock_manager = None
+
+        if self._graph_manager:
+            await self._graph_manager.close()
+            self._graph_manager = None
+            logger.info("Graph manager closed")
 
         if self._vikingdb_manager:
             self._vikingdb_manager.mark_closing()

@@ -36,6 +36,7 @@ class ContextBuilder:
         sender_name: str = None,
         is_group_chat: bool = False,
         eval: bool = False,
+        viking_client: Any = None,
     ):
         self.workspace = workspace
         self._templates_ensured = False
@@ -46,12 +47,13 @@ class ContextBuilder:
         self._sender_name = sender_name
         self._is_group_chat = is_group_chat
         self._eval = eval
+        self._viking_client = viking_client
 
     @property
     def memory(self):
         """Lazy-load MemoryStore when first needed."""
         if self._memory is None:
-            self._memory = MemoryStore(self.workspace)
+            self._memory = MemoryStore(self.workspace, client=self._viking_client)
         return self._memory
 
     @property
@@ -194,13 +196,21 @@ Skills with available="false" need dependencies installed first - you can try in
         if ov_tools_enable:
             start = _time.time()
             user = memory_user or sender_id
+            client_type = type(self._viking_client).__name__ if self._viking_client else "native"
+            logger.info(
+                "[Layer 0] _build_user_memory: using client=%s, query=%s",
+                client_type,
+                current_message[:80],
+            )
             viking_memory = await self.memory.get_viking_memory_context(
                 current_message=current_message, workspace_id=workspace_id, sender_id=user
             )
-            logger.info(f"viking_memory={viking_memory}")
             cost = round(_time.time() - start, 2)
             logger.info(
-                f"[READ_USER_MEMORY]: cost {cost}s, memory={viking_memory[:50] if viking_memory else 'None'}"
+                "[READ_USER_MEMORY]: cost %ss, client=%s, memory=%s",
+                cost,
+                client_type,
+                viking_memory[:50] if viking_memory else "None",
             )
             if viking_memory:
                 parts.append(f"## openviking_search(query=[user_query])\n{viking_memory}")

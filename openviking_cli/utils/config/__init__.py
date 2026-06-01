@@ -51,6 +51,7 @@ from .consts import (
     SYSTEM_CONFIG_DIR,
 )
 from .embedding_config import EmbeddingConfig
+from .graph_db_config import GraphDatabaseConfig
 from .log_config import LogConfig
 from .open_viking_config import (
     OpenVikingConfig,
@@ -88,6 +89,7 @@ __all__ = [
     "DEFAULT_OV_CONF",
     "DEFAULT_OVCLI_CONF",
     "EmbeddingConfig",
+    "GraphDatabaseConfig",
     "LogConfig",
     "OPENVIKING_CLI_CONFIG_ENV",
     "OPENVIKING_CONFIG_ENV",

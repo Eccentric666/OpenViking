@@ -67,6 +67,7 @@ class QueueManager:
     # Standard queue names
     EMBEDDING = "Embedding"
     SEMANTIC = "Semantic"
+    GRAPH = "Graph"
 
     def __init__(
         self,
@@ -141,6 +142,22 @@ class QueueManager:
 
         if start:
             self.start()
+
+    def setup_graph_queue(
+        self,
+        graph_handler: Any,
+    ) -> None:
+        """Register graph extraction queue. Call after pipeline is initialized.
+
+        Args:
+            graph_handler: GraphHandler instance ready to process messages.
+        """
+        self.get_queue(
+            self.GRAPH,
+            dequeue_handler=graph_handler,
+            allow_create=True,
+        )
+        logger.info("Graph extraction queue initialized with GraphHandler")
 
     def _start_queue_worker(self, queue: NamedQueue) -> None:
         """Start a dedicated worker thread for a queue if not already running."""
@@ -314,6 +331,16 @@ class QueueManager:
                 )
             elif name == self.SEMANTIC:
                 self._queues[name] = SemanticQueue(
+                    self._agfs,
+                    self.mount_point,
+                    name,
+                    enqueue_hook=enqueue_hook,
+                    dequeue_handler=dequeue_handler,
+                )
+            elif name == self.GRAPH:
+                from openviking.storage.graphdb.graph_queue import GraphQueue
+
+                self._queues[name] = GraphQueue(
                     self._agfs,
                     self.mount_point,
                     name,

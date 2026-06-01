@@ -736,6 +736,29 @@ class AsyncHTTPClient(BaseClient):
             raise exc
         return self._handle_response(response)
 
+    async def search_graph_text(
+        self,
+        query: str,
+        top_k: int = 10,
+    ) -> str:
+        """Graph Memory text search via HTTP.
+
+        Calls the ``/api/v1/graph/search/text`` endpoint and returns the
+        natural-language result string.
+        """
+        response = await self._http.post(
+            "/api/v1/graph/search/text",
+            json={
+                "query": query,
+                "top_k": top_k,
+            },
+        )
+        response_data = self._handle_response_data(response)
+        result = response_data.get("result") or {}
+        if isinstance(result, str):
+            return result
+        return str(result.get("text", result.get("result", "")))
+
     async def grep(
         self,
         uri: str,
