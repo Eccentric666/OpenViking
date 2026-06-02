@@ -82,8 +82,6 @@ class VikingListTool(OVFileTool):
 class VikingSearchTool(OVFileTool):
     """Tool to search Viking resources."""
 
-    _memrouter_client = None
-
     @property
     def name(self) -> str:
         return "openviking_search"
@@ -240,32 +238,19 @@ class VikingSearchTool(OVFileTool):
         min_score: float = 0.35,
         **kwargs: Any,
     ) -> str:
-        memrouter_enabled = os.environ.get("MEMROUTER_ENABLED", "false").lower() == "true"
         logger.info(
-            "[VikingSearchTool] query=%s target_uri=%s memrouter_enabled=%s min_score=%s",
-            query, target_uri, memrouter_enabled, min_score,
+            "[VikingSearchTool] query=%s target_uri=%s min_score=%s",
+            query, target_uri, min_score,
         )
 
         try:
-            # Layer 1: prefer the shared MemRouterVikingClient injected by AgentLoop.
-            # Falls back to local creation for standalone / test usage.
-            if memrouter_enabled and tool_context.viking_client is not None:
-                logger.info(
-                    "[VikingSearchTool] Layer 1 using injected viking_client (%s)",
-                    type(tool_context.viking_client).__name__,
-                )
-                results = await tool_context.viking_client.search(query, target_uri=target_uri)
+            client = await self._get_client(tool_context)
+            if os.environ.get("VIKING_SEARCH_USE_LOCAL_CLIENT", "false").lower() == "true":
+                search_client = client
             else:
-                client = await self._get_client(tool_context)
-                if os.environ.get("VIKING_SEARCH_USE_LOCAL_CLIENT", "false").lower() == "true":
-                    search_client = client
-                else:
-                    search_client = getattr(client, "admin_user_client", client)
+                search_client = getattr(client, "admin_user_client", client)
 
-                if memrouter_enabled:
-                    results = await self._execute_with_memrouter(search_client, query, target_uri)
-                else:
-                    results = await search_client.search(query, target_uri=target_uri, limit=20)
+            results = await search_client.search(query, target_uri=target_uri, limit=20)
 
             if not results:
                 return f"No results found for query: {query}"
@@ -280,28 +265,6 @@ class VikingSearchTool(OVFileTool):
         except Exception as e:
             logger.exception("Error searching Viking: %s", e)
             return f"Error searching Viking: {str(e)}"
-
-    async def _execute_with_memrouter(
-        self,
-        search_client: Any,
-        query: str,
-        target_uri: Optional[str] = "",
-    ) -> Any:
-        """Execute search through MemRouter fast path (legacy standalone path)."""
-        if self._memrouter_client is None:
-            echomem_path = os.environ.get(
-                "ECHOMEM_PATH",
-                r"D:\Code\cursorProject\EchoMem",
-            )
-            if echomem_path not in sys.path:
-                sys.path.insert(0, echomem_path)
-
-            from echomem.agent_sdk.memrouter_viking_client import MemRouterVikingClient
-            self._memrouter_client = MemRouterVikingClient(viking_client=search_client)
-            await self._memrouter_client.initialize()
-            logger.info("[VikingSearchTool] MemRouterVikingClient initialized (standalone)")
-
-        return await self._memrouter_client.search(query, target_uri=target_uri)
 
 
 class VikingAddResourceTool(OVFileTool):

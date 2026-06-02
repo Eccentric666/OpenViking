@@ -57,7 +57,7 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-console = Console()
+console = Console(force_terminal=True, legacy_windows=False)
 EXIT_COMMANDS = {"exit", "quit", "/exit", "/quit", ":q"}
 
 

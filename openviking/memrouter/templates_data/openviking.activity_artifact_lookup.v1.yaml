@@ -1,0 +1,185 @@
+schema_version: mem-router.backend-route-template.v1
+template_id: openviking.activity_artifact_lookup.v1
+version: '1.0'
+status: enabled
+target:
+  primary_backend_id: openviking_memory_backend
+  secondary_backend_ids: []
+intent_family:
+  name: activity_artifact_lookup
+  description: >
+    Queries asking what a person DID, VISITED, READ, BOUGHT, CREATED, ATTENDED,
+    or EXPERIENCED. The focus is on the activity or artifact itself — the concrete
+    action, object, place, or event. This is NOT about when it happened (temporal),
+    NOT about relationships between people (graph), NOT about subjective reasons
+    or feelings (why/how did they feel), NOT about preferences or favorites, and
+    NOT about counts or lists of types.
+semantic_card: |
+  This template routes queries that seek concrete activities, artifacts, or experiences
+  associated with a person. The core intent is "what did they do / what did they interact with."
+
+  IN-SCOPE examples:
+    - "What books has Caroline read?"
+    - "What places did Melanie visit?"
+    - "What did X paint?"
+    - "What concerts has X attended?"
+    - "What food did X eat at the restaurant?"
+    - "What items did X buy?"
+    - "What trips has X taken?"
+    - "What sports has X played?"
+    - "What movies has X watched?"
+    - "What workshops did X attend?"
+
+  OUT-OF-SCOPE (route elsewhere):
+    - Temporal: "When did Caroline read the book?" → streamlined_memory_backend
+    - Duration: "How long has Melanie been reading?" → streamlined_memory_backend
+    - Relationship: "What did Caroline and Melanie do together?" → graph_memory_backend
+    - Commonality: "What activities do Caroline and Melanie share?" → graph_memory_backend
+    - Subjective: "Why did Caroline read that book?" → openviking_memory_backend (subjective)
+    - Preference: "What is Melanie's favorite book?" → openviking_memory_backend (preference)
+    - Count/List: "How many books has Caroline read?" → openviking_memory_backend (count)
+    - Profile: "What is Caroline's reading habit?" → openviking_memory_backend (profile_state)
+
+  Key discriminators:
+    - Contains a person entity and an activity/artifact category.
+    - No temporal anchor (when, last time, recently, before, after, during).
+    - No relationship between multiple people (with, together, both).
+    - No subjective or evaluative language (why, feel, think, opinion).
+    - No quantification (how many, count, total number).
+    - No preference signal (favorite, best, most liked, prefer).
+query_prototypes:
+- What books has Caroline read?
+- What items did Melanie buy?
+- What places has Caroline visited?
+- What did X paint?
+- What events has Melanie attended?
+- What museums has Caroline been to?
+- What concerts has Melanie been to?
+- What workshops did Caroline attend?
+- What sports has Melanie played?
+- What games has Caroline played?
+- What trips has Melanie taken?
+- What food did Caroline eat?
+- What movies has Melanie watched?
+- What music has Caroline listened to?
+- What articles did Melanie read?
+- What podcasts has Caroline listened to?
+- What courses did Melanie take?
+- What projects has Caroline worked on?
+- What recipes did Melanie try?
+- What restaurants has Caroline been to?
+- What parks has Melanie visited?
+- What exhibitions did Caroline see?
+- What plays has Melanie watched?
+- What hikes has Caroline done?
+- What classes did Melanie sign up for?
+- What apps has Caroline used?
+- What tools did Melanie purchase?
+- What gifts has Caroline received?
+- What donations did Melanie make?
+- What subscriptions has Caroline started?
+- What languages is Melanie learning?
+- What skills has Caroline picked up?
+- What certifications did Melanie earn?
+- What hobbies has Caroline tried?
+- What performances did Melanie see?
+- What festivals has Caroline attended?
+- What hotels did Melanie stay at?
+- What airlines has Caroline flown with?
+- What museums did X visit?
+- What books did X read last year?
+- What movies did X watch?
+- What games did X play?
+- What places did X travel to?
+- What food did X try?
+- What music did X listen to?
+hard_negatives:
+- query: When did Caroline buy the book?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Contains temporal anchor "when" seeking a specific time point, not the artifact itself.
+- query: How long has Melanie been reading novels?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Asks for duration (how long), which is a temporal measurement, not an artifact lookup.
+- query: What did Caroline and Melanie do together?
+  confusing_with_backend: graph_memory_backend
+  reason: Involves relationship between two people ("together"), seeking shared activity — graph scope.
+- query: What activities do Caroline and Melanie share?
+  confusing_with_backend: graph_memory_backend
+  reason: Asks for commonality between two people ("share"), which is a graph relationship query.
+- query: Why did Caroline read that book?
+  confusing_with_backend: openviking_memory_backend
+  reason: Asks for subjective reason/motivation ("why"), not the artifact itself.
+- query: How did Melanie feel about the concert?
+  confusing_with_backend: openviking_memory_backend
+  reason: Seeks subjective feeling/opinion ("feel"), not the activity or artifact.
+- query: What is Caroline's favorite book?
+  confusing_with_backend: openviking_memory_backend
+  reason: Contains preference signal ("favorite"), routing to preference template.
+- query: What is Melanie's favorite place to visit?
+  confusing_with_backend: openviking_memory_backend
+  reason: Preference query with "favorite", not a neutral artifact lookup.
+- query: How many books has Caroline read?
+  confusing_with_backend: openviking_memory_backend
+  reason: Quantification ("how many"), seeking a count rather than artifacts.
+- query: What types of movies does Melanie watch?
+  confusing_with_backend: openviking_memory_backend
+  reason: Asks for categories/types ("types of"), which is a list/count pattern.
+- query: What is Caroline's reading habit?
+  confusing_with_backend: openviking_memory_backend
+  reason: Seeks a profile/state description ("habit"), not concrete artifacts.
+- query: What does Melanie usually do on weekends?
+  confusing_with_backend: openviking_memory_backend
+  reason: Asks for habitual pattern/profile state ("usually"), not specific artifacts.
+- query: When was the last time Caroline visited a museum?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Temporal anchor ("last time", "when") seeking recency, not the artifact.
+- query: What did Caroline do before she read the book?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Temporal sequencing ("before"), seeking prior event in timeline.
+- query: What places has Caroline visited with Melanie?
+  confusing_with_backend: graph_memory_backend
+  reason: Involves two people ("with Melanie"), seeking co-visited places — graph scope.
+- query: When did Melanie run a charity race?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Temporal anchor "when" seeking event timestamp, not the activity itself.
+- query: When is Melanie planning on going camping?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Temporal planning query with "when", seeking future timestamp.
+- query: When did Caroline give a speech at a school?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Temporal anchor "when" seeking event time, not the speech content.
+- query: When did Melanie sign up for a pottery class?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Temporal query with "when did...sign up", seeking registration time.
+- query: When did Caroline have a picnic?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Temporal query with "when did", seeking event timestamp.
+- query: When did Melanie go to the pottery workshop?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Temporal query with "when did...go to", seeking attendance time.
+- query: How long has Caroline had her current group of friends for?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Duration query "how long", seeking temporal span not activity.
+- query: How long ago was Caroline's 18th birthday?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Temporal recency query, seeking elapsed time not event detail.
+query_spec:
+  search_mode: search
+  openviking:
+    context_type: memory
+    target_uri: viking://memories
+    skip_intent_analysis: true
+    typed_query_template:
+      intent: activity_artifact_lookup
+      priority: 1
+      target_directories: null
+thresholds:
+  accept: 0.54
+  fallback: 0.44
+  margin: 0.04
+  hard_negative_margin: 0.03
+  hard_negative_penalty: 0.15
+calibration:
+  min_positive_examples: 30
+  min_hard_negatives: 12
+  expected_fallback_rate: 0.2

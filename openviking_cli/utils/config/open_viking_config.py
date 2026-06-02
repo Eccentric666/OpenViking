@@ -23,6 +23,7 @@ from .embedding_config import EmbeddingConfig
 from .encryption_config import EncryptionConfig
 from .log_config import LogConfig
 from .memory_config import MemoryConfig
+from .memrouter_config import MemRouterConfig
 from .parser_config import (
     AudioConfig,
     CodeConfig,
@@ -122,6 +123,11 @@ class OpenVikingConfig(BaseModel):
     )
 
     default_search_limit: int = Field(default=3, description="Default number of results to return")
+
+    memrouter: MemRouterConfig = Field(
+        default_factory=MemRouterConfig,
+        description="MemRouter embedded routing configuration",
+    )
 
     language_fallback: str = Field(
         default="en",

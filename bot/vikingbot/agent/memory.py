@@ -46,18 +46,21 @@ class MemoryStore:
             return ""
 
         # Filter by min_score and sort by score descending
+        def _get_score(m):
+            return m.get("score", 0.0) if isinstance(m, dict) else getattr(m, "score", 0.0)
+
         filtered_memories = [
-            memory for memory in result if getattr(memory, "score", 0.0) >= min_score
+            memory for memory in result if _get_score(memory) >= min_score
         ]
-        filtered_memories.sort(key=lambda m: getattr(m, "score", 0.0), reverse=True)
+        filtered_memories.sort(key=_get_score, reverse=True)
 
         user_memories = []
         total_chars = 0
 
         for idx, memory in enumerate(filtered_memories, start=1):
-            uri = getattr(memory, "uri", "")
-            abstract = getattr(memory, "abstract", "")
-            score = getattr(memory, "score", 0.0)
+            uri = memory.get("uri", "") if isinstance(memory, dict) else getattr(memory, "uri", "")
+            abstract = memory.get("abstract", "") if isinstance(memory, dict) else getattr(memory, "abstract", "")
+            score = _get_score(memory)
 
             # First, try to build full memory with content
             try:
@@ -151,11 +154,11 @@ class MemoryStore:
             # Collect raw search result URIs for downstream (e.g. relevant_memories)
             raw_uris = []
             for mem in result.get("user_memory", []):
-                uri = getattr(mem, "uri", "")
+                uri = mem.get("uri", "") if isinstance(mem, dict) else getattr(mem, "uri", "")
                 if uri:
                     raw_uris.append(uri)
             for mem in result.get("agent_memory", []):
-                uri = getattr(mem, "uri", "")
+                uri = mem.get("uri", "") if isinstance(mem, dict) else getattr(mem, "uri", "")
                 if uri:
                     raw_uris.append(uri)
             self.last_search_results = raw_uris
@@ -165,10 +168,14 @@ class MemoryStore:
             memory_list.append(f'user_memory[{len(result['user_memory'])}]:')
 
             for i, mem in enumerate(result['user_memory']):
-                memory_list.append(f"{i},{getattr(mem, 'uri', '')},{getattr(mem, 'score', 0)}")
+                _uri = mem.get("uri", "") if isinstance(mem, dict) else getattr(mem, 'uri', '')
+                _score = mem.get("score", 0) if isinstance(mem, dict) else getattr(mem, 'score', 0)
+                memory_list.append(f"{i},{_uri},{_score}")
             memory_list.append(f'agent_memory[{len(result['agent_memory'])}]:')
             for i, mem in enumerate(result['agent_memory']):
-                memory_list.append(f"{i},{getattr(mem, 'uri', '')},{getattr(mem, 'score', 0)}")
+                _uri = mem.get("uri", "") if isinstance(mem, dict) else getattr(mem, 'uri', '')
+                _score = mem.get("score", 0) if isinstance(mem, dict) else getattr(mem, 'score', 0)
+                memory_list.append(f"{i},{_uri},{_score}")
             logger.info(f"[RAW_MEMORIES]\n{'\n'.join(memory_list)}")
             user_memory = await self._parse_viking_memory(result["user_memory"], client, min_score=0.35)
             agent_memory = await self._parse_viking_memory(result["agent_memory"], client, min_score=0.35, max_chars=2000)

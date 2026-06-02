@@ -105,10 +105,16 @@ async def chat(
             if BOT_API_KEY:
                 headers["X-Gateway-Token"] = BOT_API_KEY
 
+            # Inject user_id from request context into body so gateway
+            # Layer 0 pre-retrieval uses the correct user identity
+            effective_body = dict(body)
+            if _ctx.user.user_id and not effective_body.get("user_id"):
+                effective_body["user_id"] = _ctx.user.user_id
+
             # Forward to Vikingbot OpenAPIChannel chat endpoint
             response = await client.post(
                 f"{bot_url}/bot/v1/chat",
-                json=body,
+                json=effective_body,
                 headers=headers,
                 timeout=300.0,  # 5 minute timeout for chat
             )
@@ -163,11 +169,16 @@ async def chat_stream(
                 if BOT_API_KEY:
                     headers["X-Gateway-Token"] = BOT_API_KEY
 
+                # Inject user_id from request context into body
+                effective_body = dict(body)
+                if _ctx.user.user_id and not effective_body.get("user_id"):
+                    effective_body["user_id"] = _ctx.user.user_id
+
                 # Forward to Vikingbot OpenAPIChannel stream endpoint
                 async with client.stream(
                     "POST",
                     f"{bot_url}/bot/v1/chat/stream",
-                    json=body,
+                    json=effective_body,
                     headers=headers,
                     timeout=300.0,
                 ) as response:

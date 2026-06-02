@@ -382,6 +382,45 @@ class OpenVikingService:
         self._relation_service.set_viking_fs(self._viking_fs)
         self._pack_service.set_viking_fs(self._viking_fs)
         self._search_service.set_viking_fs(self._viking_fs)
+
+        # Initialize MemRouterService if enabled
+        if self._config.memrouter.enabled:
+            try:
+                from openviking.service.memrouter_service import MemRouterService
+
+                memrouter_cfg = self._config.memrouter.model_dump()
+                # Derive embedding config from OV's embedding config if not explicitly set
+                if not memrouter_cfg.get("embedding", {}).get("api_key"):
+                    ov_embed = self._config.embedding.dense
+                    memrouter_cfg["embedding"] = {
+                        "provider": ov_embed.provider or "openai",
+                        "model": ov_embed.model or "text-embedding-v3",
+                        "api_key": ov_embed.api_key or "",
+                        "api_base": ov_embed.api_base or "",
+                    }
+                # Derive LLM fallback config from OV's VLM config if not explicitly set
+                if not memrouter_cfg.get("llm_fallback", {}).get("api_key"):
+                    ov_vlm = self._config.vlm
+                    provider = ov_vlm.provider or "openai"
+                    # Map "openai" provider to "openai_compatible" for MemRouter
+                    if provider == "openai":
+                        provider = "openai_compatible"
+                    memrouter_cfg["llm_fallback"] = {
+                        "provider": provider,
+                        "model": ov_vlm.model or "deepseek-v4-flash",
+                        "api_key": ov_vlm.api_key or "",
+                        "api_base": ov_vlm.api_base or "",
+                    }
+
+                memrouter_service = MemRouterService(
+                    search_service=self._search_service,
+                    config=memrouter_cfg,
+                )
+                self._search_service.set_memrouter_service(memrouter_service)
+                logger.info("MemRouterService initialized and attached to SearchService")
+            except Exception as exc:
+                logger.error("Failed to initialize MemRouterService: %s", exc, exc_info=True)
+
         self._resource_service.set_dependencies(
             vikingdb=self._vikingdb_manager,
             viking_fs=self._viking_fs,
@@ -404,6 +443,13 @@ class OpenVikingService:
 
     async def close(self) -> None:
         """Close OpenViking and release resources."""
+        # Close MemRouterService if attached
+        if self._search_service and getattr(self._search_service, "_memrouter_service", None):
+            try:
+                await self._search_service._memrouter_service.close()
+            except Exception as exc:
+                logger.warning("Error closing MemRouterService: %s", exc)
+
         if self._watch_scheduler:
             await self._watch_scheduler.stop()
             self._watch_scheduler = None

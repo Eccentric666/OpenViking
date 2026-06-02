@@ -210,3 +210,4 @@ specs/
 # Local VectorDB fallback generated/kept for source-tree benchmark runs.
 # The wheel normally ships native engine binaries; this file is not part of the MemRouter fast-path change.
 openviking/storage/vectordb/engine/_x86_sse3.py
+!/benchmark/runs/

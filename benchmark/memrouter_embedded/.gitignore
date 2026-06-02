@@ -1,0 +1,20 @@
+# Workspace runtime data
+workspace/
+
+# Logs
+logs/
+*.log
+
+# Evaluation outputs
+runs/
+results/
+
+# Local config files with API keys
+config/*.local.yaml
+
+# PowerShell scripts with tokens
+run_cat3_judge.ps1
+
+# mypy cache
+.mypy_cache/
+!data/

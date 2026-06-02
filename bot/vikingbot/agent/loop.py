@@ -180,39 +180,18 @@ class AgentLoop:
         self._mcp_connected = False
 
     async def _ensure_viking_client(self) -> Any:
-        """Lazy-init unified VikingClient (or MemRouterVikingClient when enabled).
+        """Lazy-init unified VikingClient.
 
         Returns a shared client instance used by both Layer 0 (pre-retrieval
         via ContextBuilder -> MemoryStore) and Layer 1 (tool call via
-        VikingSearchTool). The instance is created once and reused across
-        messages to avoid re-initialising the MemRouter pipeline on every
-        search_memory call.
+        VikingSearchTool). MemRouter routing now lives inside OpenViking Server,
+        so VikingBot only needs a plain VikingClient.
         """
         if self._viking_client is not None:
             return self._viking_client
 
-        base_client = await VikingClient.create(agent_id="default")
-
-        if os.environ.get("MEMROUTER_ENABLED", "false").lower() == "true":
-            import sys
-            from pathlib import Path
-
-            echomem_path = os.environ.get(
-                "ECHOMEM_PATH",
-                r"D:\Code\cursorProject\EchoMem",
-            )
-            if echomem_path not in sys.path:
-                sys.path.insert(0, echomem_path)
-
-            from echomem.agent_sdk.memrouter_viking_client import MemRouterVikingClient
-
-            self._viking_client = MemRouterVikingClient(viking_client=base_client)
-            await self._viking_client.initialize()
-            logger.info("AgentLoop: MemRouterVikingClient initialised (Layer 0 + Layer 1)")
-        else:
-            self._viking_client = base_client
-            logger.info("AgentLoop: VikingClient initialised (native, no MemRouter)")
-
+        self._viking_client = await VikingClient.create(agent_id="default")
+        logger.info("AgentLoop: VikingClient initialised")
         return self._viking_client
 
     async def _publish_thinking_event(

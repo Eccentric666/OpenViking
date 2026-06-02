@@ -24,10 +24,24 @@ class SearchService:
 
     def __init__(self, viking_fs: Optional[VikingFS] = None):
         self._viking_fs = viking_fs
+        self._memrouter_service: Optional[Any] = None
 
     def set_viking_fs(self, viking_fs: VikingFS) -> None:
         """Set VikingFS instance (for deferred initialization)."""
         self._viking_fs = viking_fs
+
+    def set_memrouter_service(self, memrouter_service: Optional[Any]) -> None:
+        """Set MemRouterService for embedded routing.
+
+        When set, ``search()`` automatically routes queries through MemRouter
+        before executing retrieval.  Graph / Streamlined backends fall back to
+        native OV search automatically.
+        """
+        self._memrouter_service = memrouter_service
+        if memrouter_service:
+            logger.info("SearchService: MemRouterService attached")
+        else:
+            logger.info("SearchService: MemRouterService detached")
 
     def _ensure_initialized(self) -> VikingFS:
         """Ensure VikingFS is initialized."""
@@ -44,8 +58,14 @@ class SearchService:
         limit: int = 10,
         score_threshold: Optional[float] = None,
         filter: Optional[Dict] = None,
+        _skip_memrouter: bool = False,
     ) -> Any:
         """Complex search with session context.
+
+        When MemRouterService is attached, queries are automatically routed
+        through MemRouter before retrieval.  High-confidence template hits
+        bypass the native IntentAnalyzer (fast path); all other cases fall
+        back to native search.
 
         Args:
             query: Query string
@@ -54,10 +74,26 @@ class SearchService:
             limit: Max results
             score_threshold: Score threshold
             filter: Metadata filters
+            _skip_memrouter: Internal flag to prevent recursive routing.
 
         Returns:
             FindResult
         """
+        # MemRouter fast path (skip when called from MemRouterService fallback)
+        if (
+            not _skip_memrouter
+            and self._memrouter_service is not None
+            and self._memrouter_service.is_ready()
+        ):
+            return await self._memrouter_service.search(
+                query=query,
+                ctx=ctx,
+                target_uri=target_uri,
+                limit=limit,
+                score_threshold=score_threshold,
+                filter=filter,
+            )
+
         viking_fs = self._ensure_initialized()
 
         session_info = None

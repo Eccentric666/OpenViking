@@ -1,0 +1,145 @@
+memory_type: processes
+description: |
+  Process memory for task progress over time.
+
+  Use this memory type to store one coherent task process segment, not a single
+  isolated event and not a raw session log. A process segment should describe
+  how a task moved through ordered steps, what decisions changed the path, what
+  state the task reached, and where future work should resume.
+
+  Consider `processes` during every memory extraction. Write a `processes`
+  memory when the conversation contains task-like work with a clear goal,
+  multi-step progress, state change, blocker, failure, important decision,
+  pause point, or useful resume point.
+
+  Prefer `processes` over `events` when the future recall need is:
+  where did we stop, why did it fail, what changed, or what should happen next.
+
+  Do not write `processes` for ordinary preferences, static facts, casual chat,
+  or a single standalone happening without meaningful task progression.
+
+  If the transcript explicitly mentions a task, run, or evaluation identifier,
+  include it in both `process_name` and `task_refs` when reasonable so later
+  retrieval can anchor to the correct process memory.
+directory: "viking://user/{{ user_space }}/memories/processes"
+filename_template: "{{ extract_context.get_year(ranges|default(''))|default('unknown') }}/{{ extract_context.get_month(ranges|default(''))|default('unknown') }}/{{ extract_context.get_day(ranges|default(''))|default('unknown') }}/{{ process_name }}.md"
+enabled: false
+operation_mode: "add_only"
+content_template: |
+  # {{ process_name }}
+
+  - Goal: {{ goal }}
+  - Status: {{ status }}
+  - Start Time: {{ start_time|default('N/A') }}
+  - End Time: {{ end_time|default('N/A') }}
+  - Resume From: {{ resume_from|default('') }}
+  - Task Refs: {{ task_refs|default('') }}
+
+  ## Key Steps
+  {{ key_steps|default('') }}
+
+  ## Critical Decisions
+  {{ critical_decisions|default('') }}
+
+  ## Decision Revisions
+  {{ decision_revisions|default('') }}
+
+  ## Failure Summary
+  {{ failure_summary|default('') }}
+
+  ## Source Ranges
+  {{ ranges|default('') }}
+
+overview_template: |-
+  # Processes Overview
+  {% if items %}**Date:** {{ extract_context.get_year(items[0].file_content.ranges|default(''))|default('') }}/{{ extract_context.get_month(items[0].file_content.ranges|default(''))|default('') }}/{{ extract_context.get_day(items[0].file_content.ranges|default(''))|default('') }}{% endif %}
+  {% for item in items %}
+  - [{{ item.file_content.process_name }}](./{{ item.file_name }}) - {{ item.file_content.status }} - {{ item.file_content.goal }}
+  {% endfor %}
+
+fields:
+  - name: process_name
+    type: string
+    description: |
+      Human-readable process segment name. If English, use concise snake_case.
+      Do not include dates or slashes.
+    merge_op: immutable
+
+  - name: goal
+    type: string
+    description: |
+      The main goal this process segment tried to accomplish.
+    merge_op: immutable
+
+  - name: status
+    type: string
+    description: |
+      Current or final process status. Prefer one of:
+      running, blocked, failed, completed, abandoned, paused.
+    merge_op: immutable
+
+  - name: start_time
+    type: string
+    description: |
+      Absolute start time if available. Use a concrete timestamp or date rather
+      than relative wording.
+
+  - name: end_time
+    type: string
+    description: |
+      Absolute end time if available. Use a concrete timestamp or date rather
+      than relative wording.
+
+  - name: task_refs
+    type: string
+    description: |
+      Optional task, run, session, or evaluation identifiers explicitly
+      mentioned in the process. If there are multiple, render them in one
+      compact string, for example:
+      `task_a, task_b`.
+
+  - name: key_steps
+    type: string
+    description: |
+      Ordered steps describing how the process unfolded. Render as a compact
+      markdown bullet list inside one string, not a verbatim transcript.
+      Example:
+      `- Step one\n- Step two\n- Step three`
+    merge_op: immutable
+
+  - name: critical_decisions
+    type: string
+    description: |
+      Important decisions or direction changes that affected the process path.
+      Render as a compact markdown bullet list string when there are multiple
+      decisions.
+
+  - name: decision_revisions
+    type: string
+    description: |
+      Optional short traces of revised judgments, such as an initial concern
+      that was later corrected after new evidence. Prefer compact
+      `initial -> revised -> final` phrasing. If there are multiple, use a
+      markdown bullet list string.
+
+  - name: failure_summary
+    type: string
+    description: |
+      Optional explanation of why the process is blocked or failed. Leave empty
+      for completed or normally running processes unless there is useful risk
+      context.
+
+  - name: resume_from
+    type: string
+    description: |
+      A short action-oriented recovery point. It should answer: if this task is
+      resumed later, what is the most useful next starting point?
+    merge_op: immutable
+
+  - name: ranges
+    type: string
+    description: |
+      Conversation message index ranges supporting this process memory, format:
+      `start-end,start-end,...`. Prefer the full contiguous range that covers
+      the process segment.
+    merge_op: immutable

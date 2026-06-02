@@ -151,10 +151,12 @@ def _merge_ov_server_config(bot_data: dict, ov_data: dict) -> None:
         bot_data["server_url"] = f"http://{host}:{port}"
     if "root_api_key" not in bot_data or not bot_data["root_api_key"]:
         bot_data["root_api_key"] = ov_data.get("root_api_key", "")
-    if "root_api_key" in bot_data and bot_data["root_api_key"]:
-        bot_data["mode"] = "remote"
-    else:
-        bot_data["mode"] = "local"
+    # Only override mode if not explicitly set in bot.ov_server
+    if "mode" not in bot_data:
+        if bot_data.get("root_api_key"):
+            bot_data["mode"] = "remote"
+        else:
+            bot_data["mode"] = "local"
 
 
 def save_config(
