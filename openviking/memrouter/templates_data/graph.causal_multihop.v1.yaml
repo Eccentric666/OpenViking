@@ -95,6 +95,16 @@ hard_negatives:
   - query: "What did PERSON_A discuss with PERSON_B?"
     confusing_with_backend: "graph_memory_backend"
     reason: "Discussion relation, not causal chain."
+  # v2.1: Personal motivation/reasoning queries that look like causal but are subjective
+  - query: "Why did PERSON_A decide to start their own business?"
+    confusing_with_backend: "openviking_memory_backend"
+    reason: "Personal motivation/decision reasoning, not causal system analysis."
+  - query: "Why did PERSON_A choose to do ACTION_X?"
+    confusing_with_backend: "openviking_memory_backend"
+    reason: "Subjective choice reasoning, not causal chain traversal."
+  - query: "Why did PERSON_A quit their job?"
+    confusing_with_backend: "openviking_memory_backend"
+    reason: "Personal reason lookup, not system causal analysis."
 
 thresholds:
   accept: 0.66

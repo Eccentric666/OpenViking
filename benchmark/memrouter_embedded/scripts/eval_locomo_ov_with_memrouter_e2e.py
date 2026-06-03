@@ -39,7 +39,6 @@ import requests
 BACKENDS = [
     "openviking_memory_backend",
     "graph_memory_backend",
-    "streamlined_memory_backend",
 ]
 
 
@@ -138,28 +137,52 @@ def _format_memories_xml(memories_text: str, case_id: str) -> str:
 
     Parses the XML string returned by VikingBot (from MemoryStore) and
     re-formats it with full detail including similarity scores.
+    Handles truncated XML gracefully.
     """
     if not memories_text or "<memory" not in memories_text:
         return ""
 
+    # Strip markdown prefix like "### user memories:\n" before XML parsing
+    cleaned = memories_text
+    if "<memory" in cleaned:
+        cleaned = cleaned[cleaned.index("<memory"):]
+
     lines = [f'<memories case_id="{case_id}">']
-    try:
-        # Wrap in a root element for valid XML parsing
-        wrapped = f"<root>{memories_text}</root>"
-        root = ET.fromstring(wrapped)
-        for idx, mem in enumerate(root.findall("memory")):
-            mtype = mem.get("type", "memory")
-            # Sub-elements: uri, score, content are child nodes, not attributes
-            uri_elem = mem.find("uri")
-            uri = uri_elem.text if uri_elem is not None else ""
-            score_elem = mem.find("score")
-            score = score_elem.text if score_elem is not None else ""
-            # Try to extract content from nested elements
+
+    # Use regex to extract complete <memory>...</memory> blocks
+    # This handles truncated XML better than ET.fromstring
+    import re
+    mem_pattern = re.compile(r'<memory\s+([^>]*)>(.*?)</memory>', re.DOTALL)
+    matches = list(mem_pattern.finditer(cleaned))
+
+    if matches:
+        for idx, m in enumerate(matches):
+            attrs_str = m.group(1)
+            inner = m.group(2)
+            # Parse attributes
+            mtype = "memory"
+            for attr_match in re.finditer(r'(\w+)="([^"]*)"', attrs_str):
+                if attr_match.group(1) == "type":
+                    mtype = attr_match.group(2)
+
+            # Extract uri, score, content from inner XML
+            uri = ""
+            uri_m = re.search(r'<uri>(.*?)</uri>', inner, re.DOTALL)
+            if uri_m:
+                uri = uri_m.group(1).strip()
+
+            score = ""
+            score_m = re.search(r'<score>(.*?)</score>', inner, re.DOTALL)
+            if score_m:
+                score = score_m.group(1).strip()
+
             content = ""
-            for child in mem:
-                if child.tag in ("abstract", "content", "summary"):
-                    content = (child.text or "").strip()
+            for tag in ("abstract", "content", "summary"):
+                cm = re.search(rf'<{tag}>(.*?)</{tag}>', inner, re.DOTALL)
+                if cm:
+                    content = cm.group(1).strip()
                     break
+
             if not content and uri:
                 content = f"Memory from {uri}"
 
@@ -170,8 +193,8 @@ def _format_memories_xml(memories_text: str, case_id: str) -> str:
                 lines.append(f"    <score>{score}</score>")
             lines.append(f"    <content>{content[:500]}</content>")
             lines.append("  </memory>")
-    except ET.ParseError:
-        # Fallback: return raw text wrapped in CDATA-like block
+    else:
+        # No complete memory blocks found — fallback to raw
         lines.append("  <parse_error>Raw memory text:</parse_error>")
         lines.append(f"  <raw><![CDATA[{memories_text[:2000]}]]></raw>")
 
@@ -240,6 +263,8 @@ def fetch_ov_memories(
                     "score": m.get("score", 0),
                     "context_type": m.get("context_type", ""),
                     "level": m.get("level", 0),
+                    "abstract": m.get("abstract", ""),
+                    "content": m.get("content", ""),
                 }
                 for m in memories
             ]
@@ -310,8 +335,9 @@ Respond with JSON only: {{"is_correct": "CORRECT" or "WRONG", "reasoning": "your
     try:
         base = str(llm_client.base_url) if hasattr(llm_client.base_url, '__str__') else llm_client.base_url
         url = f"{base.rstrip('/')}/v1/messages"
+        api_key = llm_client.headers.get("x-api-key", "") if hasattr(llm_client, "headers") else getattr(llm_client, "api_key", "")
         headers = {
-            "x-api-key": llm_client.api_key,
+            "x-api-key": api_key,
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
@@ -455,8 +481,13 @@ async def _run_cases(
                 "question_time": question_time,
             })
 
-    # Apply global limit
-    if args.limit_questions:
+    # Apply global limit and start/end offset
+    if args.start_question > 1:
+        cases = cases[args.start_question - 1:]
+    if args.end_question > 0:
+        end_idx = args.end_question - args.start_question + 1
+        cases = cases[:end_idx]
+    elif args.limit_questions:
         cases = cases[:args.limit_questions]
 
     (results_dir / "dataset_snapshot.jsonl").write_text(
@@ -838,6 +869,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--force-memory-search", action="store_true", default=False, help="Force memory search.")
     parser.add_argument("--limit-samples", type=int, default=0, help="Limit samples.")
     parser.add_argument("--limit-questions", type=int, default=0, help="Limit questions.")
+    parser.add_argument("--start-question", type=int, default=1, help="Start from question N (1-based).")
+    parser.add_argument("--end-question", type=int, default=0, help="End at question N (1-based, 0=unset).")
     parser.add_argument("--category", type=str, default="", help="Filter by category.")
     parser.add_argument("--judge", action="store_true", default=False, help="Run LLM judge.")
     parser.add_argument("--judge-base-url", default="https://api.minimaxi.com/anthropic", help="Judge base URL.")

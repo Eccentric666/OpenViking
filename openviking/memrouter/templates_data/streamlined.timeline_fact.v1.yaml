@@ -1,7 +1,7 @@
 schema_version: mem-router.backend-route-template.v1
 template_id: streamlined.timeline_fact.v1
 version: '2.1'
-status: enabled
+status: disabled
 target:
   primary_backend_id: streamlined_memory_backend
   secondary_backend_ids: []

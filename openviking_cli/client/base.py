@@ -63,6 +63,19 @@ class BaseClient(ABC):
         """Wait for all processing to complete."""
         ...
 
+    @abstractmethod
+    async def search_graph_text(
+        self,
+        query: str,
+        top_k: int = 10,
+    ) -> str:
+        """Graph Memory text search via HTTP.
+
+        Calls the ``/api/v1/graph/search/text`` endpoint and returns the
+        natural-language result string.
+        """
+        ...
+
     # ============= File System =============
 
     @abstractmethod

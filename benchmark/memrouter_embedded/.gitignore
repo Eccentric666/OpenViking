@@ -11,9 +11,19 @@ results/
 
 # Local config files with API keys
 config/*.local.yaml
+config/*.conf
 
-# PowerShell scripts with tokens
+# PowerShell scripts with hardcoded tokens (keep templates only)
 run_cat3_judge.ps1
+run_small_verify.ps1
+
+# Backup data
+data/neo4j_backup/
+
+# Scripts with hardcoded local paths
+scripts/fix_workspace_index.py
+scripts/index_workspace_memories.py
+scripts/run_full_eval.ps1
 
 # mypy cache
 .mypy_cache/

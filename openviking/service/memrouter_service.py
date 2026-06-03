@@ -122,7 +122,7 @@ class MemRouterService:
             provider=llm_cfg.get("provider", "openai"),
             model=llm_cfg.get("model", "deepseek-v4-flash"),
             api_key=llm_cfg.get("api_key", ""),
-            api_base=llm_cfg.get("api_base", ""),
+            base_url=llm_cfg.get("base_url", ""),
         )
 
     def _init_route_events(self) -> None:
@@ -268,8 +268,67 @@ class MemRouterService:
                 result = await self._search_service.execute_instruction(
                     instruction=instruction_dict, ctx=ctx
                 )
+            elif backend_id == "graph_memory_backend":
+                # Graph fast path: direct graph retrieval via GraphManager
+                execution_path = "memrouter_graph_fast_path"
+                logger.info(
+                    "MemRouter graph fast path: template=%s confidence=%.4f",
+                    route_result.get("routes", [{}])[0].get("matched_template_id", "") if route_result else "",
+                    route_result.get("routes", [{}])[0].get("confidence", 0.0) if route_result else 0.0,
+                )
+                try:
+                    graph_text = await self._search_service.search_graph_text(
+                        query=query, ctx=ctx, top_k=limit
+                    )
+                    if graph_text:
+                        # Wrap graph NL text into a FindResult-compatible dict
+                        result = {
+                            "memories": [
+                                {
+                                    "uri": "viking://graph/result",
+                                    "context_type": "memory",
+                                    "level": 2,
+                                    "abstract": graph_text,
+                                    "score": 1.0,
+                                    "category": "graph",
+                                    "match_reason": "graph_backend",
+                                    "relations": [],
+                                }
+                            ],
+                            "resources": [],
+                            "skills": [],
+                            "total": 1,
+                        }
+                    else:
+                        # Empty graph result — fallback to native search
+                        execution_path = "memrouter_graph_empty_fallback"
+                        logger.info(
+                            "Graph search returned empty; falling back to native OV search"
+                        )
+                        result = await self._search_service.search(
+                            query=query,
+                            ctx=ctx,
+                            target_uri=target_uri,
+                            limit=limit,
+                            _skip_memrouter=True,
+                            **kwargs,
+                        )
+                except Exception as graph_exc:
+                    execution_path = "memrouter_graph_error_fallback"
+                    logger.warning(
+                        "Graph search failed (%s); falling back to native OV search",
+                        graph_exc,
+                    )
+                    result = await self._search_service.search(
+                        query=query,
+                        ctx=ctx,
+                        target_uri=target_uri,
+                        limit=limit,
+                        _skip_memrouter=True,
+                        **kwargs,
+                    )
             else:
-                # Fallback: graph / streamlined / llm_fallback → native OV search
+                # Fallback: llm_fallback / no template hit / route error → native OV search
                 execution_path = "memrouter_fallback_to_native"
                 logger.info(
                     "MemRouter fallback: backend=%s skip_ia=%s — using native OV search",
@@ -372,8 +431,10 @@ class MemRouterService:
                 event["template_id"] = routes[0].get("matched_template_id", "")
                 event["confidence"] = routes[0].get("confidence", 0.0)
             event["fallback"] = route_result.get("fallback", {})
+            debug = route_result.get("debug", {})
             event["debug"] = {
-                "top_templates": route_result.get("debug", {}).get("top_templates", []),
+                "top_templates": debug.get("top_templates", []),
+                "llm_fallback_meta": debug.get("llm_fallback_meta", {}),
             }
 
         if error:

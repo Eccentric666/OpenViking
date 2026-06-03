@@ -298,6 +298,38 @@ async def grep(
     return Response(status="ok", result=result)
 
 
+class GraphSearchRequest(BaseModel):
+    """Request model for graph text search."""
+
+    query: str
+    top_k: int = 10
+
+
+@router.post("/graph")
+async def search_graph(
+    request: GraphSearchRequest,
+    _ctx: RequestContext = Depends(get_request_context),
+):
+    """Graph Memory semantic search returning natural-language text.
+
+    Direct endpoint for graph-backed entity-relation retrieval.
+    Bypasses MemRouter routing; callers that want automatic backend
+    selection should use ``POST /search`` instead.
+    """
+    service = get_service()
+    execution = await run_operation(
+        operation="search.graph",
+        telemetry=False,
+        fn=lambda: service.search.search_graph_text(
+            query=request.query,
+            ctx=_ctx,
+            top_k=request.top_k,
+        ),
+    )
+    result = execution.result
+    return Response(status="ok", result=result).model_dump(exclude_none=True)
+
+
 @router.post("/glob")
 async def glob(
     request: GlobRequest,

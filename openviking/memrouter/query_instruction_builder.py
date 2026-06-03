@@ -218,11 +218,6 @@ class QueryInstructionBuilder:
             instruction.search_mode = "temporal_query"
             instruction.extra_params.update(temporal_spec.model_dump())
 
-        elif streamlined_spec is not None:
-            instruction.search_mode = "streamlined_recall"
-            instruction.skip_intent_analysis = True
-            instruction.extra_params.update(streamlined_spec.model_dump())
-
         # If no backend-specific spec was present, keep the generic instruction
         # (consumer will treat it as a basic find/search)
         return instruction

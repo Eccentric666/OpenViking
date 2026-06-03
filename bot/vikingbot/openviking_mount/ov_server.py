@@ -297,6 +297,28 @@ class VikingClient:
             logger.error(f"Error getting or creating API key for user {user_id}: {e}")
             return None
 
+    async def search_graph_text(
+        self, query: str, top_k: int = 10
+    ) -> str:
+        """Graph Memory 自然语言检索。
+
+        调用 OpenViking 的 /api/v1/graph/search/text 端点，
+        返回图数据库中实体关系的自然语言描述文本。
+
+        Args:
+            query: 查询字符串
+            top_k: 最大返回实体数
+
+        Returns:
+            图检索结果的自然语言文本，无结果或失败时返回空字符串
+        """
+        try:
+            result = await self.client.search_graph_text(query=query, top_k=top_k)
+            return result if isinstance(result, str) else str(result)
+        except Exception as e:
+            logger.warning(f"[GRAPH_SEARCH] search_graph_text failed: {e}")
+            return ""
+
     async def search_memory(
         self, query: str, user_id: str, agent_user_id: str, limit: int = 10
     ) -> dict[str, list[Any]]:

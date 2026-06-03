@@ -111,6 +111,71 @@ _PLACEHOLDER_PATTERN = re.compile(
 )
 
 
+def _replace_placeholder(match: "re.Match[str]") -> str:
+    """Map template placeholder tokens to semantically meaningful generic words.
+
+    Previously all placeholders were replaced with ``"person"``, which destroyed
+    the semantic distinction between actions, places, items, etc.  Now each
+    placeholder family maps to a domain-appropriate token so that embedding
+    similarity reflects the *structural role* of the slot, not just its presence.
+    """
+    token = match.group(1).upper()
+    if token.startswith("PERSON"):
+        return "person"
+    if token.startswith("ACTION") or token.startswith("ACTIVITY"):
+        return "action"
+    if token.startswith("ITEM"):
+        return "item"
+    if token.startswith("PLACE"):
+        return "place"
+    if token.startswith("EVENT"):
+        return "event"
+    if token.startswith("JOB"):
+        return "job"
+    if (
+        token.startswith("DATE")
+        or token.startswith("MONTH")
+        or token.startswith("YEAR")
+        or token.startswith("TIME_PERIOD")
+    ):
+        return "date"
+    if token.startswith("GROUP") or token.startswith("ORGANIZATION"):
+        return "group"
+    if token.startswith("BAND"):
+        return "band"
+    if token.startswith("MOVIE"):
+        return "movie"
+    if token == "BOOK_TITLE":
+        return "book"
+    if token.startswith("HOBBY"):
+        return "hobby"
+    if token.startswith("SKILL"):
+        return "skill"
+    if token.startswith("PROJECT"):
+        return "project"
+    if token.startswith("FOOD"):
+        return "food"
+    if token.startswith("PET"):
+        return "pet"
+    if token.startswith("TRIP"):
+        return "trip"
+    if token.startswith("NOUN"):
+        return "thing"
+    if token.startswith("COMPETITION"):
+        return "competition"
+    if token.startswith("RELATIVE"):
+        return "relative"
+    if token == "CREATIVE_WORK":
+        return "work"
+    if token == "CARE_OF_ITEM":
+        return "care"
+    if token.startswith("HOLIDAY"):
+        return "holiday"
+    if token.startswith("ACCIDENT"):
+        return "accident"
+    return "thing"
+
+
 class QueryNormalizer:
     """Normalize raw user queries into stable matching text."""
 
@@ -161,7 +226,7 @@ class QueryNormalizer:
         text = _PERSON_NAME_PATTERN.sub("person", text)
 
         # Step 6: replace template placeholders with generic tokens
-        text = _PLACEHOLDER_PATTERN.sub("person", text)
+        text = _PLACEHOLDER_PATTERN.sub(_replace_placeholder, text)
 
         logger.debug(
             "Normalized query: raw='%s' -> normalized='%s'",

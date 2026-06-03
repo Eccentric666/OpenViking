@@ -437,6 +437,22 @@ class SyncHTTPClient:
 
     # ============= Debug =============
 
+    def search_graph_text(
+        self,
+        query: str,
+        top_k: int = 10,
+    ) -> str:
+        """Graph Memory text search via HTTP.
+
+        Calls the ``/api/v1/graph/search/text`` endpoint and returns the
+        natural-language result string.
+        """
+        return run_async(
+            self._async_client.search_graph_text(query=query, top_k=top_k)
+        )
+
+    # ============= Debug =============
+
     def health(self) -> bool:
         """Check server health."""
         return run_async(self._async_client.health())

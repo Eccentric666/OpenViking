@@ -43,6 +43,22 @@ class GraphAdapter(MemoryBackendAdapter):
             "hop_depth": 2,
             "traversal_direction": "both",
         },
+        # Temporal queries routed to graph — graph relations carry rel_date attributes
+        "graph_temporal_query": {
+            "graph_query_type": "temporal_lookup",
+            "hop_depth": 1,
+            "traversal_direction": "both",
+        },
+        "graph_duration_query": {
+            "graph_query_type": "temporal_lookup",
+            "hop_depth": 2,
+            "traversal_direction": "both",
+        },
+        "graph_sequence_query": {
+            "graph_query_type": "temporal_lookup",
+            "hop_depth": 2,
+            "traversal_direction": "both",
+        },
     }
     _DEFAULT_GRAPH_SPEC: Dict[str, Any] = {
         "graph_query_type": "entity_lookup",

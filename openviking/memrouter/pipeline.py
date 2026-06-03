@@ -12,7 +12,6 @@ from typing import List
 
 from openviking.memrouter.adapters.graph import GraphAdapter
 from openviking.memrouter.adapters.openviking import OpenVikingAdapter
-from openviking.memrouter.adapters.streamlined import StreamlinedMemoryAdapter
 from openviking.memrouter.decision import RouteDecision
 from openviking.memrouter.embeddings.base import EmbeddingProvider
 from openviking.memrouter.features import QueryFeatureBuilder
@@ -152,8 +151,8 @@ class MemRouterPipeline:
                 If None, all backends are enabled.
                 If provided, only listed backends participate in routing.
                 ``openviking_memory_backend`` is always enabled regardless.
-                Example: ``["openviking_memory_backend", "streamlined_memory_backend"]``
-                disables graph and keeps ov+streamlined.
+                Example: ``["openviking_memory_backend", "graph_memory_backend"]``
+                enables both OV and graph backends (default).
 
         Returns:
             Configured MemRouterPipeline ready for routing.
@@ -164,7 +163,6 @@ class MemRouterPipeline:
         _all_backend_ids = {
             "openviking_memory_backend",
             "graph_memory_backend",
-            "streamlined_memory_backend",
         }
         if enabled_backends is not None:
             enabled_set = set(enabled_backends)
@@ -208,22 +206,6 @@ class MemRouterPipeline:
                 )
             )
 
-        if "streamlined_memory_backend" in enabled_set:
-            registry.register(
-                BackendEntry(
-                    backend_id="streamlined_memory_backend",
-                    backend_kind="streamlined_store",
-                    status="enabled",
-                    description="Streamlined memory backend for timeline facts, sequence reasoning, duration comparison, and task/thread/process context. Physically connected via OpenViking Streamlined Memory sidecar.",
-                    query_contract=QueryContract(
-                        input_format="natural_language_with_hints",
-                        supports_entities=True,
-                        supports_time_range=True,
-                        supports_relation_hints=False,
-                    ),
-                    cost_profile=CostProfile(latency_class="low", token_cost_class="low"),
-                )
-            )
         logger.info(
             "Registered %d logical backend(s), enabled=%s",
             len(registry),
@@ -273,8 +255,6 @@ class MemRouterPipeline:
         adapters: Dict[str, Any] = {
             "openviking_memory_backend": OpenVikingAdapter(),
         }
-        if "streamlined_memory_backend" in enabled_set:
-            adapters["streamlined_memory_backend"] = StreamlinedMemoryAdapter()
         if "graph_memory_backend" in enabled_set:
             adapters["graph_memory_backend"] = GraphAdapter()
         query_instruction_builder = QueryInstructionBuilder(

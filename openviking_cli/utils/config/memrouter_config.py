@@ -22,7 +22,7 @@ class MemRouterLLMConfig(BaseModel):
     provider: str = Field(default="openai", description="LLM provider")
     model: str = Field(default="deepseek-v4-flash", description="LLM model name")
     api_key: str = Field(default="", description="API key")
-    api_base: str = Field(default="", description="API base URL")
+    base_url: str = Field(default="", description="API base URL")
 
 
 class MemRouterConfig(BaseModel):

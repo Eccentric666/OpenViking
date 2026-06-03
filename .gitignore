@@ -211,3 +211,8 @@ specs/
 # The wheel normally ships native engine binaries; this file is not part of the MemRouter fast-path change.
 openviking/storage/vectordb/engine/_x86_sse3.py
 !/benchmark/runs/
+/patches/
+/benchmark/memrouter_embedded/streamlined-memory/
+/benchmark/memrouter_embedded/results/
+/benchmark/memrouter_embedded/logs/
+/benchmark/memrouter_embedded/data/neo4j_backup/

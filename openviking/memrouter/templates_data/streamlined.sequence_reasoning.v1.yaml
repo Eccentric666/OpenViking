@@ -1,7 +1,7 @@
 schema_version: "mem-router.backend-route-template.v1"
 template_id: "streamlined.sequence_reasoning.v1"
 version: "1.0"
-status: "enabled"
+status: "disabled"
 
 target:
   primary_backend_id: "streamlined_memory_backend"

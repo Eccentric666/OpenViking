@@ -262,11 +262,13 @@ class QueryPlan:
         queries: List of typed queries
         session_context: Session context summary
         reasoning: LLM reasoning process
+        token_usage: Token usage from intent analysis (optional, for eval)
     """
 
     queries: List[TypedQuery]
     session_context: str
     reasoning: str
+    token_usage: Optional[Dict[str, int]] = None
 
 
 @dataclass

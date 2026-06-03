@@ -61,8 +61,16 @@ class IntentAnalyzer:
             target_abstract,
         )
 
-        # Call LLM
-        response = await get_openviking_config().vlm.get_completion_async(prompt)
+        # Call LLM — record token usage before/after
+        vlm = get_openviking_config().vlm
+        vlm_instance = vlm.get_vlm_instance()
+        token_before = vlm_instance.get_token_usage_summary() if vlm_instance and hasattr(vlm_instance, "get_token_usage_summary") else {}
+
+        response = await vlm.get_completion_async(prompt)
+
+        token_after = vlm_instance.get_token_usage_summary() if vlm_instance and hasattr(vlm_instance, "get_token_usage_summary") else {}
+        ia_prompt_tokens = token_after.get("total_prompt_tokens", 0) - token_before.get("total_prompt_tokens", 0)
+        ia_completion_tokens = token_after.get("total_completion_tokens", 0) - token_before.get("total_completion_tokens", 0)
 
         # Parse result
         parsed = parse_json_from_response(response)
@@ -97,6 +105,11 @@ class IntentAnalyzer:
             queries=queries,
             session_context=self._summarize_context(compression_summary, current_message),
             reasoning=parsed.get("reasoning", ""),
+            token_usage={
+                "prompt_tokens": ia_prompt_tokens,
+                "completion_tokens": ia_completion_tokens,
+                "total_tokens": ia_prompt_tokens + ia_completion_tokens,
+            },
         )
 
     def _build_context_prompt(

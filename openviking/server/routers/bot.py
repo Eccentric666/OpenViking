@@ -20,7 +20,7 @@ router = APIRouter(prefix="", tags=["bot"])
 logger = get_logger(__name__)
 
 # Bot API configuration - set when --with-bot is enabled
-BOT_API_URL: Optional[str] = None  # e.g., "http://localhost:18791"
+BOT_API_URL: Optional[str] = "http://127.0.0.1:18790"  # Default for embedded mode
 BOT_API_KEY: str = ""
 
 

@@ -122,6 +122,9 @@ class SearchService:
     ) -> Any:
         """Semantic search without session context.
 
+        When MemRouterService is attached, queries are automatically routed
+        through MemRouter before retrieval, just like ``search()``.
+
         Args:
             query: Query string
             target_uri: Target directory URI
@@ -132,6 +135,20 @@ class SearchService:
         Returns:
             FindResult
         """
+        # MemRouter fast path — same routing logic as search()
+        if (
+            self._memrouter_service is not None
+            and self._memrouter_service.is_ready()
+        ):
+            return await self._memrouter_service.search(
+                query=query,
+                ctx=ctx,
+                target_uri=target_uri,
+                limit=limit,
+                score_threshold=score_threshold,
+                filter=filter,
+            )
+
         viking_fs = self._ensure_initialized()
         result = await viking_fs.find(
             query=query,

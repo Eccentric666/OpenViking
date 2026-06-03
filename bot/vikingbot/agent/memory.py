@@ -77,6 +77,15 @@ class MemoryStore:
                     f"  <content>{content}</content>\n"
                     f"</memory>"
                 )
+            elif abstract:
+                # Fallback to abstract (e.g. graph backend results)
+                memory_str = (
+                    f'<memory index="{idx}" type="abstract">\n'
+                    f"  <uri>{uri}</uri>\n"
+                    f"  <score>{score}</score>\n"
+                    f"  <content>{abstract}</content>\n"
+                    f"</memory>"
+                )
             else:
                 # No content available, use link-only version
                 memory_str = (
@@ -95,7 +104,36 @@ class MemoryStore:
                 user_memories.append(memory_str)
                 total_chars += memory_chars
             else:
-                # If full version is too big, try link-only version
+                # Memory too big — try truncated abstract first (for graph results)
+                if abstract:
+                    base_len = len(
+                        f'<memory index="{idx}" type="abstract">\n'
+                        f"  <uri>{uri}</uri>\n"
+                        f"  <score>{score}</score>\n"
+                        f"  <content></content>\n"
+                        f"</memory>"
+                    )
+                    remaining = max_chars - total_chars - base_len
+                    if user_memories:
+                        remaining -= 1
+                    if remaining > 50:
+                        truncated = abstract[:remaining]
+                        truncated_str = (
+                            f'<memory index="{idx}" type="abstract">\n'
+                            f"  <uri>{uri}</uri>\n"
+                            f"  <score>{score}</score>\n"
+                            f"  <content>{truncated}</content>\n"
+                            f"</memory>"
+                        )
+                        truncated_chars = len(truncated_str)
+                        if user_memories:
+                            truncated_chars += 1
+                        if total_chars + truncated_chars <= max_chars:
+                            user_memories.append(truncated_str)
+                            total_chars += truncated_chars
+                            continue
+
+                # Fallback to link-only version
                 link_only_str = (
                     f'<memory index="{idx}" type="link">\n'
                     f"  <uri>{uri}</uri>\n"

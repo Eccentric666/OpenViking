@@ -274,62 +274,6 @@ def _build_system_prompt(context: LLMFallbackContext, max_secondary_routes: int)
             ]
         )
 
-    if "streamlined_memory_backend" in enabled_backend_ids:
-        rules.append(
-            "4. TEMPORAL-OVERRIDE RULE (highest priority): If the user query starts with "
-            "'When did', 'How long', 'How many years/months/days', 'How many times has', "
-            "'First time', 'Last time', or asks explicitly for a timestamp, date, duration, "
-            "elapsed time, event order, or recency, you MUST route to streamlined_memory_backend. "
-            "This rule OVERRIDES all other rules when time is the core answer."
-        )
-        rules.append(
-            "4b. Strong temporal signals (any one triggers temporal-override): "
-            "'when did', 'how long', 'how many years', 'how many months', 'how many days', "
-            "'first time', 'last time', 'before', 'after', 'between', 'ago', 'recently', "
-            "'in July 2023', 'on Monday', 'what happened on DATE', 'how many times has', "
-            "'when was the last time', 'when did ... start', 'when did ... finish', "
-            "'how long has ... been'."
-        )
-        rules.append(
-            "4c. TEMPORAL FACT BOUNDARY (critical): A query that asks for a FACT about a person "
-            "(e.g. what state, which country, did X have Y) AND contains an explicit time anchor "
-            "(e.g. 'in summer 2021', 'during September 2023', 'in July 2022', 'in May 2023') "
-            "belongs to streamlined_memory_backend, NOT openviking_memory_backend. "
-            "The time anchor constrains the search to a specific period, making it a temporal query "
-            "regardless of whether the answer is a place, state, or yes/no. "
-            "Examples: 'What state did Joanna visit in summer 2021?' (temporal — 'in summer 2021' anchors the query), "
-            "'Did James have a girlfriend during April 2022?' (temporal — 'during April 2022' anchors it), "
-            "'Which country was Evan visiting in May 2023?' (temporal — 'in May 2023' anchors it), "
-            "'Which US state was Sam travelling in during October 2023?' (temporal — 'during October 2023' anchors it)."
-        )
-        rules.append(
-            "4d. Boundary (OVERRIDE does NOT apply): A query that merely CONTAINS a time word "
-            "but the answer is a person, place, item, attribute, or subjective experience, AND "
-            "the time word is descriptive context rather than a search anchor. "
-            "Example: 'Who supports Caroline when she has a negative experience?' -> answer is a PERSON, not a time. "
-            "Example: 'Where did John explore on a road trip last year?' -> answer is a PLACE, not a time. "
-            "Example: 'What did Joanna receive from her brother that brought back childhood memories?' -> answer is a GIFT, not a time. "
-            "Example: 'What significant event happened... towards the end of summer 2023?' -> answer is an EVENT DESCRIPTION, not a timestamp."
-        )
-        examples.extend(
-            [
-                '- "How long did I wait for the decision?" -> streamlined_memory_backend (duration)',
-                '- "When did Melanie go to the museum?" -> streamlined_memory_backend (timestamp) OVERRIDE',
-                '- "How many times has Melanie gone to the beach in 2023?" -> streamlined_memory_backend (count+time) OVERRIDE',
-                '- "When did Jon start reading The Lean Startup?" -> streamlined_memory_backend (start time) OVERRIDE',
-                '- "When did Maria get in a car accident?" -> streamlined_memory_backend (event time) OVERRIDE',
-                '- "How long has Nate had his first two turtles?" -> streamlined_memory_backend (duration) OVERRIDE',
-                '- "When did Joanna start writing her third screenplay?" -> streamlined_memory_backend (start time) OVERRIDE',
-                '- "When did Melanie run a charity race?" -> streamlined_memory_backend (event time) OVERRIDE',
-                '- "When did Melanie go camping in July?" -> streamlined_memory_backend (timestamp) OVERRIDE',
-                '- "When did Jon visit networking events for his store?" -> streamlined_memory_backend (event time) OVERRIDE',
-                '- "Who supports Caroline when she has a negative experience?" -> openviking_memory_backend (person, not time)',
-                '- "What did Joanna receive from her brother that brought back childhood memories?" -> openviking_memory_backend (gift, not time)',
-                '- "Where did John explore on a road trip last year?" -> openviking_memory_backend (place, not time)',
-                '- "What significant event happened in Sam\'s life towards the end of summer 2023?" -> openviking_memory_backend (event description, not time)',
-            ]
-        )
-
     if "openviking_memory_backend" in enabled_backend_ids:
         rules.append(
             "5. Route to openviking_memory_backend when the query asks for "
@@ -411,7 +355,7 @@ def _build_user_prompt(context: LLMFallbackContext) -> str:
         lines.append(
             f"ATTENTION: This query contains STRONG TEMPORAL SIGNALS: {', '.join(temporal_signals[:5])}. "
             "If the core question is asking for a time, date, duration, or order, "
-            "you MUST route to streamlined_memory_backend (OVERRIDE rule 4 applies)."
+            "route to openviking_memory_backend (native semantic search can handle temporal facts)."
         )
         lines.append("")
     lines.append("Failed or low-confidence template matches (with their target backend):")

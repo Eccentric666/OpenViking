@@ -123,10 +123,14 @@ class TemplateMatcher:
         boost = 0.0
         template_id = template.template_id
 
-        # Streamlined: temporal facts (when, what date, which year)
-        if template_id == "streamlined.timeline_fact.v1":
+        # Graph: temporal facts (when, what date, which year)
+        # Routed to graph because graph relations carry rel_date attributes.
+        if template_id == "graph.timeline_fact.v1":
             if any(kw in query for kw in ("when did", "what date", "which year", "what year")):
                 boost = 0.06
+            elif any(kw in query for kw in ("when has", "when was", "when were")):
+                # Present-perfect / passive-voice temporal queries (benchmark style)
+                boost = 0.05
             elif query.startswith("when ") and "when did" not in query:
                 boost = 0.04
             # v1.5: boost queries containing explicit month/year/season anchors
@@ -142,9 +146,16 @@ class TemplateMatcher:
                 "between august", "between september", "between october", "between november",
             )):
                 boost = 0.05
+            # Weak signal: specific temporal event keywords (after normalizer replaces names with "person")
+            elif any(kw in query for kw in (
+                "has lost", "was fired", "got fired", "has started", "has begun",
+                "was hired", "got hired", "has quit", "has left", "has moved",
+            )):
+                boost = 0.03
 
-        # Streamlined: duration comparison
-        elif template_id == "streamlined.duration_comparison.v1":
+        # Graph: duration comparison
+        # Routed to graph because graph relations carry rel_date attributes for elapsed-time calc.
+        elif template_id == "graph.duration_comparison.v1":
             if any(kw in query for kw in ("how long", "how many days", "how many months",
                                             "how many years", "how many weeks", "how much time",
                                             "passed between", "duration", "how many days ago",
@@ -152,8 +163,9 @@ class TemplateMatcher:
                                             "how many weeks ago")):
                 boost = 0.06
 
-        # Streamlined: sequence reasoning
-        elif template_id == "streamlined.sequence_reasoning.v1":
+        # Graph: sequence reasoning
+        # Routed to graph because graph can traverse event chains via rel_date ordering.
+        elif template_id == "graph.sequence_reasoning.v1":
             if any(kw in query for kw in ("which happened first", "what happened first",
                                             "before or after", "earlier or later")):
                 boost = 0.06
@@ -171,12 +183,13 @@ class TemplateMatcher:
             elif query.startswith("would "):
                 boost = 0.05
 
-        # Graph: entity relation — only if non-temporal
+        # Graph: entity relation (non-temporal and temporal+multi-entity)
         elif template_id == "graph.entity_relation.v1":
+            # Branch A: non-temporal relation queries
             if any(kw in query for kw in ("relationship", "both ", " share ", " common ",
                                             " together", " collaborated", " connected to",
                                             "relation between")):
-                # Do NOT boost if query contains temporal keywords
+                # Do NOT boost if query contains temporal keywords (pure relation)
                 if not any(kw in query for kw in ("when", "how long", "before", "after",
                                                     "first", "last time")):
                     boost = 0.06
@@ -189,6 +202,16 @@ class TemplateMatcher:
             elif any(kw in query for kw in ("both person", "with their family", "with his family",
                                              "with her family", "for both", "between person")):
                 boost = 0.05
+
+            # Branch B: temporal + multi-entity queries (e.g. "When did Jon and Gina collaborate?")
+            # These are routed to graph because graph relations carry rel_date attributes
+            has_temporal = any(kw in query for kw in ("when", "how long", "before", "after",
+                                                       "first", "last time"))
+            has_multi_entity = any(kw in query for kw in (" and ", "both ", "between ",
+                                                           "together", "collaborated",
+                                                           "with ", " share "))
+            if has_temporal and has_multi_entity and boost == 0.0:
+                boost = 0.04
         # OpenViking: count/list fact
         elif template_id == "openviking.count_list_fact.v1":
             if any(kw in query for kw in ("how many", "what types", "what kinds",
