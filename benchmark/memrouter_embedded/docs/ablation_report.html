@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoCoMo conv-30 消融实验报告</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #212529;
+            --text-secondary: #6c757d;
+            --border: #dee2e6;
+            --primary: #0d6efd;
+            --primary-light: #e7f1ff;
+            --success: #198754;
+            --success-light: #d1e7dd;
+            --warning: #ffc107;
+            --warning-light: #fff3cd;
+            --danger: #dc3545;
+            --danger-light: #f8d7da;
+            --info: #0dcaf0;
+            --radius: 8px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 24px;
+        }
+        .section {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary-light);
+            color: var(--primary);
+        }
+        .section h3 {
+            font-size: 1rem;
+            margin: 20px 0 12px;
+            color: var(--text);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin: 12px 0;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background: var(--primary-light);
+            font-weight: 600;
+            color: var(--primary);
+        }
+        tr:hover { background: #f8f9fa; }
+        td.numeric { text-align: right; font-family: "SF Mono", Monaco, monospace; }
+        .highlight {
+            background: var(--warning-light);
+            border-left: 4px solid var(--warning);
+            padding: 12px 16px;
+            border-radius: 0 var(--radius) var(--radius) 0;
+            margin: 16px 0;
+        }
+        .insight {
+            background: var(--success-light);
+            border-left: 4px solid var(--success);
+            padding: 12px 16px;
+            border-radius: 0 var(--radius) var(--radius) 0;
+            margin: 16px 0;
+        }
+        .caution {
+            background: var(--danger-light);
+            border-left: 4px solid var(--danger);
+            padding: 12px 16px;
+            border-radius: 0 var(--radius) var(--radius) 0;
+            margin: 16px 0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge-success { background: var(--success-light); color: var(--success); }
+        .badge-warning { background: var(--warning-light); color: #856404; }
+        .badge-info { background: #cff4fc; color: #055160; }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 16px 0;
+        }
+        .metric-card {
+            background: var(--primary-light);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+        }
+        .metric-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .metric-card .label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .code-block {
+            background: #f4f4f4;
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            font-family: "SF Mono", Monaco, monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+        .footer {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 32px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+        .comparison-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0;
+        }
+        .bar {
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .bar-baseline { background: #6c757d; }
+        .bar-treatment { background: var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LoCoMo conv-30 消融实验报告</h1>
+        <div class="subtitle">
+            Baseline (Native OV) vs Treatment (MemRouter + Graph) &mdash; 2026-06-03
+        </div>
+
+        <!-- 1. 实验 Setting -->
+        <div class="section">
+            <h2>1. 实验设置</h2>
+
+            <h3>1.1 数据集</h3>
+            <ul>
+                <li><strong>数据集</strong>：LoCoMo conv-30 (without cat5)，共 81 题</li>
+                <li><strong>问题分类</strong>：Category 1 (实体关系, 11题) / Category 2 (时间事实, 26题) / Category 4 (个人事实, 44题)</li>
+            </ul>
+
+            <h3>1.2 模型配置</h3>
+            <table>
+                <tr><th>角色</th><th>模型</th><th>用途</th></tr>
+                <tr><td>Bot Agent</td><td>deepseek-v4-flash</td><td>生成最终回答</td></tr>
+                <tr><td>VLM / IntentAnalyzer</td><td>deepseek-v4-flash</td><td>意图分析（仅 Baseline）</td></tr>
+                <tr><td>LLM Fallback</td><td>deepseek-v4-flash</td><td>模板匹配失败时的路由决策（仅 Treatment）</td></tr>
+                <tr><td>Judge</td><td>MiniMax-M2.7</td><td>评判回答正确性</td></tr>
+                <tr><td>Embedding</td><td>text-embedding-v3</td><td>向量检索</td></tr>
+            </table>
+
+            <h3>1.3 实验组定义</h3>
+            <table>
+                <tr><th>实验组</th><th>配置</th><th>路由方式</th></tr>
+                <tr>
+                    <td><span class="badge badge-info">Baseline #1</span></td>
+                    <td>Native OV search<br>memrouter: disabled<br><small>运行时间: 2026-06-03 11:52</small></td>
+                    <td>IntentAnalyzer (VLM) &rarr; 向量搜索</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-info">Baseline #2</span></td>
+                    <td>Native OV search<br>memrouter: disabled<br><small>运行时间: 2026-06-03 14:13（重跑）</small></td>
+                    <td>IntentAnalyzer (VLM) &rarr; 向量搜索</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-success">Treatment v1</span></td>
+                    <td>MemRouter + Graph<br>原 LLM Fallback prompt</td>
+                    <td>模板匹配 &rarr; 命中则跳过 IntentAnalyzer<br>未命中则 LLM Fallback</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-warning">Treatment v2</span></td>
+                    <td>MemRouter + Graph<br>精简 LLM Fallback prompt</td>
+                    <td>同上，但 Fallback prompt 从 ~3000 tokens 精简至 ~200 tokens</td>
+                </tr>
+            </table>
+
+            <div class="highlight">
+                <strong>统一 deepseek-v4-flash 的目的</strong>：所有 LLM 调用走同一 DeepSeek 账号，便于通过平台 dashboard 统一追踪 token 消耗和费用。
+            </div>
+        </div>
+
+        <!-- 2. 关键指标 -->
+        <div class="section">
+            <h2>2. 关键指标对比</h2>
+
+            <h3>2.1 准确率</h3>
+            <table>
+                <tr>
+                    <th>指标</th>
+                    <th class="numeric">Baseline #1</th>
+                    <th class="numeric">Baseline #2</th>
+                    <th class="numeric">Treatment v1</th>
+                    <th class="numeric">Treatment v2</th>
+                </tr>
+                <tr>
+                    <td>Judge Accuracy</td>
+                    <td class="numeric"><strong>69.14%</strong> (56/81)</td>
+                    <td class="numeric">56.79% (46/81)</td>
+                    <td class="numeric">65.43% (53/81)</td>
+                    <td class="numeric"><strong>62.96%</strong> (51/81)</td>
+                </tr>
+                <tr>
+                    <td>Backend Routing Accuracy</td>
+                    <td class="numeric">&mdash;</td>
+                    <td class="numeric">&mdash;</td>
+                    <td class="numeric">79.01% (64/81)</td>
+                    <td class="numeric">75.31% (61/81)</td>
+                </tr>
+                <tr>
+                    <td>Template Hit Rate</td>
+                    <td class="numeric">&mdash;</td>
+                    <td class="numeric">&mdash;</td>
+                    <td class="numeric">72.84% (59/81)</td>
+                    <td class="numeric">72.84% (59/81)</td>
+                </tr>
+                <tr>
+                    <td>LLM Fallback 次数</td>
+                    <td class="numeric">&mdash;</td>
+                    <td class="numeric">&mdash;</td>
+                    <td class="numeric">22 / 81</td>
+                    <td class="numeric">22 / 81</td>
+                </tr>
+            </table>
+
+            <div class="caution">
+                <strong>Baseline Rerun 方差</strong>：两次完全相同的 Baseline 运行，Judge Accuracy 相差 <strong>12.35pp</strong>（69.14% vs 56.79%）。
+                这说明在 81 题的小样本上，API 随机性（temperature）和 Judge（MiniMax）的评判方差可能显著影响结果。
+                以 Baseline #1（69.14%）为基准，Treatment v2（62.96%）反而低了 6.18pp；以 Baseline #2（56.79%）为基准，Treatment v2 高了 6.17pp。
+            </div>
+
+            <h3>2.2 Token 消耗（实验产物统计）</h3>
+            <table>
+                <tr>
+                    <th>指标</th>
+                    <th class="numeric">Baseline #1</th>
+                    <th class="numeric">Baseline #2</th>
+                    <th class="numeric">Treatment v1</th>
+                    <th class="numeric">Treatment v2</th>
+                </tr>
+                <tr>
+                    <td>Bot 回答生成 tokens</td>
+                    <td class="numeric">~2,579,399</td>
+                    <td class="numeric">2,579,399</td>
+                    <td class="numeric">2,314,089</td>
+                    <td class="numeric">2,648,419</td>
+                </tr>
+                <tr>
+                    <td>IntentAnalyzer tokens</td>
+                    <td class="numeric">~122,850</td>
+                    <td class="numeric">~122,850</td>
+                    <td class="numeric">0</td>
+                    <td class="numeric">0</td>
+                </tr>
+                <tr>
+                    <td>LLM Fallback tokens</td>
+                    <td class="numeric">0</td>
+                    <td class="numeric">0</td>
+                    <td class="numeric">~37,558</td>
+                    <td class="numeric">~9,187</td>
+                </tr>
+                <tr style="font-weight: 600; background: #f8f9fa;">
+                    <td>总 LLM tokens</td>
+                    <td class="numeric">~2,702,249</td>
+                    <td class="numeric">~2,702,249</td>
+                    <td class="numeric">2,351,647</td>
+                    <td class="numeric">2,657,606</td>
+                </tr>
+                <tr>
+                    <td>Routing tokens 占比</td>
+                    <td class="numeric">~4.5%</td>
+                    <td class="numeric">~4.5%</td>
+                    <td class="numeric">1.6%</td>
+                    <td class="numeric">0.3%</td>
+                </tr>
+            </table>
+
+            <h3>2.3 DeepSeek 平台实际花费</h3>
+            <table>
+                <tr><th>实验组</th><th class="numeric">DeepSeek 花费</th><th>说明</th></tr>
+                <tr><td>Baseline #1</td><td class="numeric">~0.6x 元</td><td>Bot + IntentAnalyzer 均走 DeepSeek</td></tr>
+                <tr><td>Baseline #2</td><td class="numeric">~0.6x 元</td><td>同上（重跑）</td></tr>
+                <tr><td>Treatment v1</td><td class="numeric">~0.6x 元</td><td>Bot + LLM Fallback 均走 DeepSeek</td></tr>
+                <tr><td>Treatment v2</td><td class="numeric">~0.6x 元</td><td>同上，但 Fallback token 大幅减少</td></tr>
+            </table>
+
+            <div class="caution">
+                <strong>关键发现</strong>：Baseline 与 Treatment 的 DeepSeek 后台花费仅相差<strong>几分钱</strong>。
+                这是因为 Bot 回答生成才是 token 消耗的绝对大头（占 95%+），Routing 阶段的 token 节省在总成本中占比极低。
+            </div>
+        </div>
+
+        <!-- 3. 重点分析 -->
+        <div class="section">
+            <h2>3. 重点分析：IntentAnalyzer Token 节省有限</h2>
+
+            <h3>3.1 Token 构成拆解</h3>
+            <p>以 Baseline 为例，总 token 消耗构成如下：</p>
+
+            <div class="comparison-bar">
+                <span style="width: 80px; font-size: 0.85rem;">Baseline</span>
+                <div class="bar bar-baseline" style="width: 95.5%">Bot 95.5%</div>
+                <div class="bar" style="width: 4.5%; background: var(--warning);">IntentAnalyzer 4.5%</div>
+            </div>
+            <div class="comparison-bar">
+                <span style="width: 80px; font-size: 0.85rem;">Treatment</span>
+                <div class="bar bar-treatment" style="width: 99.7%">Bot 99.7%</div>
+                <div class="bar" style="width: 0.3%; background: var(--warning);">Fallback 0.3%</div>
+            </div>
+
+            <h3>3.2 为什么节省有限？</h3>
+            <table>
+                <tr><th>因素</th><th>说明</th></tr>
+                <tr>
+                    <td>Bot token 占绝对主导</td>
+                    <td>每次回答生成消耗 ~30K tokens（prompt 31K + completion 0.7K），81 题共 ~2.6M tokens</td>
+                </tr>
+                <tr>
+                    <td>IntentAnalyzer 占比小</td>
+                    <td>Baseline 中 IntentAnalyzer 仅占 ~4.5%（~123K / 2.7M），且单次仅 ~1,500 tokens</td>
+                </tr>
+                <tr>
+                    <td>MemRouter 引入新开销</td>
+                    <td>Treatment 用 LLM Fallback（418 tokens/次）替代 IntentAnalyzer，但 Fallback 次数（22次）与 IntentAnalyzer 次数（81次）不同</td>
+                </tr>
+                <tr>
+                    <td>Template Hit 已零 token</td>
+                    <td>59/81 题（72.8%）通过模板匹配零 token 路由，这部分已经是最优状态</td>
+                </tr>
+            </table>
+
+            <h3>3.3 量化分析</h3>
+            <table>
+                <tr><th>场景</th><th class="numeric">Token 消耗</th><th class="numeric">占比</th></tr>
+                <tr><td>Baseline 总消耗</td><td class="numeric">~2,702,249</td><td class="numeric">100%</td></tr>
+                <tr><td>&nbsp;&nbsp;Bot 回答生成</td><td class="numeric">2,579,399</td><td class="numeric">95.5%</td></tr>
+                <tr><td>&nbsp;&nbsp;IntentAnalyzer (81次)</td><td class="numeric">~122,850</td><td class="numeric">4.5%</td></tr>
+                <tr style="border-top: 2px solid var(--border);"><td>Treatment v2 总消耗</td><td class="numeric">2,657,606</td><td class="numeric">100%</td></tr>
+                <tr><td>&nbsp;&nbsp;Bot 回答生成</td><td class="numeric">2,648,419</td><td class="numeric">99.7%</td></tr>
+                <tr><td>&nbsp;&nbsp;LLM Fallback (22次)</td><td class="numeric">~9,187</td><td class="numeric">0.3%</td></tr>
+            </table>
+
+            <div class="insight">
+                <strong>核心结论</strong>：MemRouter 确实<strong>消除了 IntentAnalyzer 的 token 消耗</strong>（81次 &times; 1,500 tokens），并通过模板匹配实现了 59/81 题的零 token 路由。但由于 Bot 回答生成是 token 消耗的绝对大头（95%+），这一节省在总成本中<strong>仅占约 4%</strong>，反映在 DeepSeek 平台上仅为<strong>几分钱的差距</strong>。<br><br>
+                <strong>关于准确率</strong>：Baseline 两次运行相差 12.35pp，说明 81 题的样本量下随机方差较大。若以 Baseline #1（69.14%）为基准，Treatment v2（62.96%）甚至略低；但 Baseline #2（56.79%）显示 Treatment 有明显提升。建议在更大样本或多次运行后取平均，以降低方差影响。
+            </div>
+
+            <h3>3.4 若需显著降低总成本</h3>
+            <p>若要显著降低实验总成本，需要优化的是 <strong>Bot 回答生成阶段的 prompt 长度</strong>，而非 Routing 阶段。可能的方向：</p>
+            <ul>
+                <li>减少检索到的记忆片段数量（当前可能传入过多记忆到 bot prompt）</li>
+                <li>使用更轻量的模型进行回答生成（如从 deepseek-v4-flash 降级到更小模型）</li>
+                <li>对记忆内容进行压缩/摘要后再传入 bot</li>
+            </ul>
+        </div>
+
+        <!-- 4. 其他发现 -->
+        <div class="section">
+            <h2>4. 其他发现</h2>
+
+            <h3>4.1 精简 Prompt 的效果</h3>
+            <table>
+                <tr><th>指标</th><th>v1 (原)</th><th>v2 (精简)</th><th>变化</th></tr>
+                <tr><td>Fallback prompt 长度</td><td class="numeric">~2,500 tokens</td><td class="numeric">~260 tokens</td><td class="numeric">-90%</td></tr>
+                <tr><td>Fallback 总 tokens</td><td class="numeric">~37,558</td><td class="numeric">~9,187</td><td class="numeric">-75%</td></tr>
+                <tr><td>Fallback backend 准确率</td><td class="numeric">86.4% (19/22)</td><td class="numeric">77.3% (17/22)</td><td class="numeric">-9.1pp</td></tr>
+                <tr><td>Judge 准确率</td><td class="numeric">65.43%</td><td class="numeric">62.96%</td><td class="numeric">-2.47pp</td></tr>
+            </table>
+
+            <h3>4.2 路由错误分析</h3>
+            <p>Treatment 中路由错误（backend 不匹配）并不一定导致答案错误：</p>
+            <table>
+                <tr><th>路由状态</th><th>题数</th><th>Judge 准确率</th></tr>
+                <tr><td>路由正确</td><td>61</td><td>~63.9%</td></tr>
+                <tr><td>路由错误</td><td>20</td><td>~60.0%</td></tr>
+            </table>
+            <p>路由正确性与答案正确性几乎无关，说明 Graph 和 OV 后端的知识覆盖有较大重叠。</p>
+        </div>
+
+        <!-- 5. 附录 -->
+        <div class="section">
+            <h2>5. 附录</h2>
+
+            <h3>5.1 实验产物路径</h3>
+            <div class="code-block">
+benchmark/memrouter_embedded/results/ablation/
+├── baseline_20260603_115248_batched/       # Baseline #1 (首次运行, 69.14%)
+├── baseline_20260603_141329_batched/       # Baseline #2 (重跑, 56.79%)
+├── treatment_20260603_125228_batched/      # Treatment v1 (原 prompt, 65.43%)
+├── treatment_20260603_150657_batched/      # Treatment v2 (精简 prompt, 62.96%)
+└── COMPACT_PROMPT_REPORT.md                # 精简 prompt 对比报告
+            </div>
+
+            <h3>5.2 关键脚本</h3>
+            <table>
+                <tr><th>脚本</th><th>路径</th><th>用途</th></tr>
+                <tr><td>Baseline Batch Runner</td><td>scripts/run_baseline_batched.ps1</td><td>分批执行 Baseline</td></tr>
+                <tr><td>Treatment Batch Runner</td><td>scripts/run_treatment_batched.ps1</td><td>分批执行 Treatment</td></tr>
+                <tr><td>Token 分析</td><td>scripts/analyze_token_usage.py</td><td>分别统计 bot/fallback token</td></tr>
+                <tr><td>结果合并</td><td>scripts/merge_batch_results.py</td><td>合并多批结果</td></tr>
+            </table>
+        </div>
+
+        <div class="footer">
+            报告生成时间：2026-06-03 &mdash; OpenViking 消融实验
+        </div>
+    </div>
+</body>
+</html>
