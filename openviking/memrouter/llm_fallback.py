@@ -203,173 +203,56 @@ def _build_system_prompt(context: LLMFallbackContext, max_secondary_routes: int)
     """Build an ASCII-only, closed-set prompt for robust compatible endpoints.
 
     MemRouter v1.4+ only routes to backend_id.
+    Designed to be < 400 tokens for minimal cost.
     """
-    catalog_lines: List[str] = []
     enabled_entries = context.registry.list_enabled()
     enabled_backend_ids = {entry.backend_id for entry in enabled_entries}
-    for entry in enabled_entries:
-        catalog_lines.append(
-            f'- backend_id: "{entry.backend_id}"\n'
-            f'  backend_kind: "{entry.backend_kind}"\n'
-            f'  description: {entry.description.strip()}'
-        )
 
-    rules: List[str] = [
-        "1. backend_id MUST be copied exactly from the catalog.",
-        f"2. Return at most 1 primary backend and at most {max_secondary_routes} secondary backend(s).",
+    # Minimal catalog: one line per backend
+    catalog = ", ".join(
+        f'"{e.backend_id}" ({e.backend_kind})' for e in enabled_entries
+    )
+
+    # Ultra-compact rules (~200 tokens)
+    rules = [
+        "1. Copy backend_id exactly from catalog.",
+        "2. Return 1 primary backend only (JSON).",
+        "3. graph_memory_backend = multi-entity relations (connections, commonalities, shared activities).",
+        "4. openviking_memory_backend = personal facts, preferences, subjective questions about ONE person.",
+        "5. No markdown. Output JSON only.",
     ]
-    examples: List[str] = []
 
-    if "graph_memory_backend" in enabled_backend_ids:
-        rules.append(
-            "3. GRAPH-FIRST RULE (strict): Only route to graph_memory_backend when the query "
-            "explicitly asks about structural relations, social networks, organizational "
-            "membership, event co-participation, or causal dependencies between MULTIPLE "
-            "entities. Do NOT route to graph for simple personal attribute lookups "
-            "(e.g. 'What books has John read?', 'What tattoo does Audrey have?') -- "
-            "those are personal facts and belong to openviking_memory_backend."
-        )
-        rules.append(
-            "3a. GRAPH BOUNDARY (critical): A query that asks what ONE person did, read, "
-            "bought, created, visited, or experienced is a PERSONAL FACT and belongs to "
-            "openviking_memory_backend. Only route to graph when the query involves "
-            "MULTIPLE people and asks about their CONNECTION, SHARED activity, or RELATIONSHIP. "
-            "Examples that are NOT graph: 'What books has John read?' (personal fact), "
-            "'What did Melanie paint?' (personal artifact), 'Where has Maria traveled?' (personal fact)."
-        )
-        rules.append(
-            "3b. COMMONALITY is graph: 'What do X and Y have in common?', 'What activities "
-            "do X and Y share?', 'What did X and Y both enjoy?' -> graph_memory_backend."
-        )
-        rules.append(
-            "3c. MULTI-ENTITY PREFERENCE / SUBJECTIVE (graph boundary): A query that asks about "
-            "a preference, choice, or subjective inference involving MULTIPLE people (e.g. 'both X and Y', "
-            "'X with their family', 'appropriate gift for X and Y') is a RELATION / COMMONALITY query "
-            "and belongs to graph_memory_backend, NOT openviking_memory_backend. "
-            "Examples: 'Which type of vacation would Evan prefer with his family?' (graph — involves Evan+family), "
-            "'What would be an appropriate gift for both Evan and Sam?' (graph — involves two people), "
-            "'How do Evan and Sam use creative outlets to cope?' (graph — involves two people)."
-        )
-        rules.append(
-            "3d. CO-PARTICIPATION with time range (graph): A query that asks whether two people "
-            "had a meeting, event, or shared experience in a specific time range (e.g. 'between August and November 2023') "
-            "is a CO-PARTICIPATION query and belongs to graph_memory_backend, because the core ask is about "
-            "the relationship/shared event between the two people. The time range narrows the scope but does not "
-            "make it a temporal query."
-        )
-        examples.extend(
-            [
-                '- "Who are Jon\'s friends?" -> graph_memory_backend (social network)',
-                '- "Which events did John and Maria both attend?" -> graph_memory_backend (co-participation)',
-                '- "Which API path starts all calls?" -> graph_memory_backend (system dependency)',
-                '- "What caused the service outage?" -> graph_memory_backend (causal dependency)',
-                '- "What do Joanna and Nate have in common?" -> graph_memory_backend (commonality)',
-                '- "What activities has Melanie done with her family?" -> graph_memory_backend (shared activity)',
-                '- "What creative project do Mel and her kids do together?" -> graph_memory_backend (joint activity)',
-                '- "How did the extra funding help the school shown in the photo shared by John?" -> graph_memory_backend (causal chain)',
-                '- "Which type of vacation would Evan prefer with his family?" -> graph_memory_backend (multi-entity preference)',
-                '- "What would be an appropriate gift for both Evan and Sam?" -> graph_memory_backend (multi-entity relation)',
-                '- "Did Calvin and Dave have a meeting in Boston between August and November 2023?" -> graph_memory_backend (co-participation with time)',
-                '- "Are John and James fans of the same football team?" -> graph_memory_backend (commonality)',
-            ]
-        )
-
-    if "openviking_memory_backend" in enabled_backend_ids:
-        rules.append(
-            "5. Route to openviking_memory_backend when the query asks for "
-            "subjective preferences, habits, feelings, vague summaries, profile "
-            "attributes, recommendations based on remembered context, previous-chat recall, "
-            "or specific personal facts about a person (e.g. items owned, books read, "
-            "places visited, attributes, experiences, collections, hobbies)."
-        )
-        examples.extend(
-            [
-                '- "What kind of music do I prefer?" -> openviking_memory_backend (preference)',
-                '- "Remind me what we discussed before." -> openviking_memory_backend (chat recall)',
-                '- "Why did Jolene put off doing yoga?" -> openviking_memory_backend (subjective reason)',
-                '- "What books has John read?" -> openviking_memory_backend (personal fact)',
-                '- "What tattoo does Audrey have?" -> openviking_memory_backend (personal attribute)',
-                '- "What items did Calvin buy?" -> openviking_memory_backend (personal fact)',
-            ]
-        )
-
-    rules.append("6. Output JSON only. No markdown and no explanation outside JSON.")
+    # Minimal examples (~100 tokens)
+    examples = [
+        '"What do X and Y have in common?" -> graph_memory_backend',
+        '"Who are John\'s friends?" -> graph_memory_backend',
+        '"What books has John read?" -> openviking_memory_backend',
+    ]
 
     return (
-        "You are a memory backend router. The template matcher could not route "
-        "the user query with enough confidence, so you must choose from the "
-        "registered backend catalog below.\n\n"
-        "Available backend catalog:\n"
-        f"{chr(10).join(catalog_lines)}\n\n"
-        "Strict constraints:\n"
-        f"{chr(10).join(rules)}\n\n"
-        "Few-shot examples:\n"
-        f"{chr(10).join(examples)}\n"
-        "\n"
-        "Output schema (backend_id and role only):\n"
-        "{\n"
-        '  "routes": [\n'
-        "    {\n"
-        '      "backend_id": "...",\n'
-        '      "role": "primary"\n'
-        "    }\n"
-        "  ]\n"
-        "}"
+        "Route user query to ONE backend.\n"
+        f"Catalog: {catalog}\n\n"
+        "Rules:\n"
+        + "\n".join(rules) + "\n\n"
+        "Examples:\n"
+        + "\n".join(examples) + "\n\n"
+        'Output: {"routes":[{"backend_id":"...","role":"primary"}]}'
     )
 
 
 def _build_user_prompt(context: LLMFallbackContext) -> str:
-    """Build an ASCII-only user prompt with query and failed template evidence."""
-    # Detect temporal signals for explicit prompting
-    raw_lower = context.raw_user_query.lower()
-    temporal_signals = []
-    temporal_keywords = [
-        "when did", "how long", "how many years", "how many months", "how many days",
-        "how many times has", "first time", "last time", "when was the last time",
-        "when did", "start", "finish", "ago", "before", "after", "between",
-        "recently", "in july", "in august", "in september", "in october",
-        "on monday", "on tuesday", "on wednesday", "on thursday", "on friday",
-        "what happened on", "what was happening on", "where was", "on december",
-        "in may", "in june", "in 2023", "in 2022", "last year", "last week",
-        "last month", "two months ago", "two weeks ago",
-        # v1.5 — broader temporal anchors
-        "in summer", "in spring", "in fall", "in winter",
-        "during january", "during february", "during march", "during april",
-        "during may", "during june", "during july", "during august",
-        "during september", "during october", "during november", "during december",
-        "during summer", "during spring", "during fall", "during winter",
-        "in january", "in february", "in march", "in april",
-        "in november", "in december", "in 2021", "in 2024",
-    ]
-    for kw in temporal_keywords:
-        if kw in raw_lower:
-            temporal_signals.append(kw)
+    """Build an ultra-compact user prompt (< 100 tokens).
 
-    lines = [
-        f"Raw user query: {context.raw_user_query}",
-        f"Normalized query: {context.normalized_user_query}",
-        f"Fallback reason: {context.fallback_reason}",
-        "",
-    ]
-    if temporal_signals:
-        lines.append(
-            f"ATTENTION: This query contains STRONG TEMPORAL SIGNALS: {', '.join(temporal_signals[:5])}. "
-            "If the core question is asking for a time, date, duration, or order, "
-            "route to openviking_memory_backend (native semantic search can handle temporal facts)."
-        )
-        lines.append("")
-    lines.append("Failed or low-confidence template matches (with their target backend):")
-    for item in context.failed_template_summary[:5]:
-        backend_id = item.get('backend_id', 'unknown')
-        lines.append(
-            f"  - template_id: {item.get('template_id', 'unknown')} "
-            f"(backend: {backend_id}), score: {item.get('score', 0)}"
-        )
-    lines.append("")
-    lines.append(
-        "Choose the best backend. Copy backend_id exactly from the catalog. "
-        "Return JSON only."
-    )
+    Keeps only the raw query and top failed template as minimal context.
+    """
+    lines = [f"Query: {context.raw_user_query}"]
+
+    # Add top failed template (at most 1) for minimal context
+    if context.failed_template_summary:
+        top = context.failed_template_summary[0]
+        lines.append(f"Top match: {top.get('template_id', 'none')} -> {top.get('backend_id', 'unknown')} (score {top.get('score', 0):.2f})")
+
+    lines.append("Route to one backend. Return JSON.")
     return "\n".join(lines)
 
 
