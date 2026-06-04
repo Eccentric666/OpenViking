@@ -28,6 +28,12 @@ scripts/fix_workspace_index.py
 scripts/index_workspace_memories.py
 scripts/run_full_eval.ps1
 
+# Runtime PID files
+*.pid
+
+# Ad-hoc temporary Python scripts
+scripts/run_treatment_full_81.py
+
 # mypy cache
 .mypy_cache/
 !data/
