@@ -1,0 +1,140 @@
+schema_version: mem-router.backend-route-template.v1
+template_id: openviking.count_list_fact.v1
+version: '1.0'
+status: enabled
+target:
+  primary_backend_id: openviking_memory_backend
+  secondary_backend_ids: []
+intent_family:
+  name: count_list_fact
+  description: Queries asking for a COUNT, LIST, or ENUMERATION of items. The answer is a list or a quantity, not a single fact, not a timestamp, not a subjective inference. "How many...?" asks for a count. "What types...?" "Which books/bands/items...?" "What are some...?" ask for a list. This is distinct from personal_fact_lookup (single fact), streamlined_memory_backend (temporal queries), and subjective_reasoning (opinion/explanation queries).
+semantic_card: |
+  This template matches queries where the user wants an enumeration or count of items from memory.
+
+  Key patterns:
+  - Count queries: "How many..." → expects a number (how many children, how many times, how many books)
+  - List queries: "What types/which/what are some..." → expects a list (which bands, what hobbies, what languages)
+  - Enumeration: "What does X collect/own/have..." → expects an inventory or set
+
+  What this is NOT:
+  - NOT a single fact lookup ("What is X's favorite book?" → personal_fact_lookup or preference)
+  - NOT a temporal query ("How many days between X and Y?" "How many times in 2023?" → streamlined)
+  - NOT a subjective inference ("Why did X read Y?" "What does X think about...?" → subjective_reasoning)
+  - NOT a profile state query ("What is X's job?" "Where does X live?" → profile_state)
+  - NOT a relation query ("What do X and Y have in common?" → graph_memory_backend)
+
+  The answer form is always plural or numeric: a list, a set, a count, an enumeration.
+query_prototypes:
+- How many children does X have?
+- How many times has X traveled to Japan?
+- How many books has X read this year?
+- How many concerts has X attended?
+- How many pets does X have?
+- How many languages does X speak?
+- How many instruments does X play?
+- What types of music does X listen to?
+- What types of food does X like?
+- What types of movies does X watch?
+- What types of exercise does X do?
+- Which books has X read?
+- Which bands has X listened to?
+- Which movies has X watched?
+- Which countries has X visited?
+- Which restaurants has X been to?
+- What items has X bought recently?
+- What products does X use?
+- What tools does X work with?
+- What are some places X has visited?
+- What are some hobbies X has?
+- What are some skills X has?
+- What are some achievements X has made?
+- What are some challenges X has faced?
+- What hobbies does X have?
+- What instruments does X play?
+- What languages does X speak?
+- What skills does X have?
+- What pets does X have?
+- What are X's favorite foods?
+- What are X's career goals?
+- What are X's achievements?
+- What challenges has X faced?
+- What activities does X do?
+- What are X's interests?
+- What does X collect?
+- What does X own?
+- What does X have in their collection?
+- What sports does X play?
+- What games does X play?
+- What courses has X taken?
+- What projects has X worked on?
+- What certifications does X hold?
+- What awards has X won?
+- What medications does X take?
+- What allergies does X have?
+hard_negatives:
+- query: How many days are there between X's birthday and Y's birthday?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Asks for a duration/computation between two dates, not a count of items from memory. Requires temporal calculation.
+- query: How many times has X gone to the gym in 2024?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Contains "how many times" but has a strong temporal anchor ("in 2024") that makes it a time-bounded frequency query best handled by streamlined backend.
+- query: How many years has X worked at Y?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Asks for a duration derived from temporal boundaries (start date to present), not an enumeration from memory.
+- query: What do X and Y have in common?
+  confusing_with_backend: graph_memory_backend
+  reason: Asks for shared attributes between two entities, which is a relation/intersection query, not a list from a single entity's memory.
+- query: What is X's favorite book?
+  confusing_with_backend: openviking_memory_backend
+  reason: Although about books, asks for a single preference item, not a list or count. Maps to personal_fact_lookup or preference template.
+- query: Why did X read "War and Peace"?
+  confusing_with_backend: openviking_memory_backend
+  reason: Asks for subjective reasoning/motivation behind an action, not a list or count of items.
+- query: What is X's job?
+  confusing_with_backend: openviking_memory_backend
+  reason: Asks for a single profile state attribute, not an enumeration. Maps to profile_state template.
+- query: What did X buy at the store yesterday?
+  confusing_with_backend: openviking_memory_backend
+  reason: Contains "what did X buy" but has a specific temporal anchor ("yesterday") and asks for a single event's details, not a general list of purchased items.
+- query: Where does X live?
+  confusing_with_backend: openviking_memory_backend
+  reason: Asks for a single location fact, not a list or count. Maps to profile_state template.
+- query: What is X's opinion on climate change?
+  confusing_with_backend: openviking_memory_backend
+  reason: Asks for a subjective opinion, not an enumeration. Maps to subjective_reasoning template.
+- query: When did X start learning piano?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Asks for a specific timestamp/event time, not a list or count.
+- query: How long did X stay in Paris?
+  confusing_with_backend: streamlined_memory_backend
+  reason: Asks for a duration, not a count of items or a list.
+- query: Who introduced X to jazz music?
+  confusing_with_backend: graph_memory_backend
+  reason: Asks for a specific relationship/connection between entities, not an enumeration from memory.
+- query: What makes X happy?
+  confusing_with_backend: openviking_memory_backend
+  reason: Asks for subjective emotional drivers, not a concrete list or count. Maps to subjective_reasoning.
+- query: Is X married?
+  confusing_with_backend: openviking_memory_backend
+  reason: Asks for a binary profile state fact, not a list or count. Maps to profile_state template.
+query_spec:
+  search_mode: search
+  openviking:
+    context_type: memory
+    target_uri: viking://memories
+    skip_intent_analysis: true
+    typed_query_template:
+      intent: count_list_fact
+      priority: 1
+      target_directories: null
+thresholds:
+  accept: 0.53
+  fallback: 0.43
+  margin: 0.04
+  hard_negative_margin: 0.03
+  hard_negative_penalty: 0.15
+  hard_negative_penalty: 0.06
+calibration:
+  min_positive_examples: 25
+  min_hard_negatives: 10
+  expected_fallback_rate: 0.25

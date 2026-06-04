@@ -7,17 +7,17 @@ target:
   secondary_backend_ids: []
 intent_family:
   name: profile_state_lookup
-  description: Queries about a person's identity, family, pets, health, occupation,
-    relationship status, or current life state.
-semantic_card: 'Use this template for direct, relatively stable profile attributes
-  or current status facts: identity, family, pets, health conditions, job, living
-  situation, demographic background, language, relationship status, support network,
-  and similar stored facts. The answer should be a direct attribute/status, not an
-  inferred mood, motivation, preference, routine, or subjective evaluation.'
+  description: Queries about a person's identity, family, pets, health, occupation, relationship status, or current life state.
+semantic_card: |
+  Use this template when the query asks for a person's static profile attribute or current life state.
+  Covers: identity, family members, pets, health conditions, job/career, relationship status, living situation,
+  demographic facts. These are "who/what is this person" questions rather than "when did they do X" (temporal)
+  or "how are they connected to Y" (graph). Includes direct attribute queries and status checks.
 query_prototypes:
 - What is PERSON_A's identity?
 - What is PERSON_A's relationship status?
 - Is PERSON_A married?
+- How many children does PERSON_A have?
 - What pets does PERSON_A have?
 - What are PERSON_A's pets' names?
 - What health issues does PERSON_A have?
@@ -53,6 +53,8 @@ query_prototypes:
 - What kind of person is PERSON_A?
 - How would you describe PERSON_A?
 - What values does PERSON_A hold?
+- What motivates PERSON_A?
+- What is PERSON_A's source of strength?
 - Who supports PERSON_A?
 - What is PERSON_A's support network?
 - What community is PERSON_A part of?
@@ -62,6 +64,16 @@ query_prototypes:
 - What conditions does PERSON_A have?
 - What is PERSON_A's physical condition?
 - What is PERSON_A's mental health status?
+- What is PERSON_A's daily routine?
+- What is PERSON_A's lifestyle?
+- What is PERSON_A's diet?
+- What is PERSON_A's exercise routine?
+- What is PERSON_A's energy level?
+- What is PERSON_A's stress level?
+- What is PERSON_A's mood?
+- How is PERSON_A feeling?
+- What is PERSON_A's outlook on life?
+- What is PERSON_A's attitude?
 - What stage of life is PERSON_A in?
 - What is PERSON_A's cultural identity?
 - What is PERSON_A's heritage background?
@@ -74,29 +86,56 @@ query_prototypes:
 - What is PERSON_A's reputation?
 - What is PERSON_A known for?
 - What is PERSON_A's public image?
-- What country is PERSON_A's grandma from?
-- What is PERSON_A's heritage?
-- Which pet did PERSON_A adopt first?
+- What is PERSON_A's life satisfaction?
+- What is PERSON_A's quality of life?
+- What is PERSON_A's happiness level?
+- What is PERSON_A's well-being?
+- What is Caroline's identity?
+- What is Caroline's relationship status?
+- What is Melanie's occupation?
+- How many children does Melanie have?
+- What are Melanie's pets' names?
+- What health issues does Caroline have?
+- Would Caroline be considered religious?
+- What is Caroline's living situation?
+- What country is Caroline's grandma from?
+- What is Caroline's heritage?
+- How would you describe Melanie's personality?
+- What values does Caroline hold?
+- Who supports Caroline when she has a negative experience?
+- What is Melanie's support network?
+- What community is Caroline part of?
+- What is Melanie's lifestyle?
+- What is Caroline's daily routine?
+- What is Melanie's mood like?
+- What is Caroline's outlook on life?
+- What stage of life is Caroline in?
+- What is Caroline's cultural identity?
+- What causes does Melanie support?
+- What is Caroline's financial situation?
+- What is Melanie known for?
+- What is Caroline's life satisfaction?
+- What is Melanie's well-being?
 hard_negatives:
-- query: At what time did PERSON_A do ACTION_X from memory?
+- query: When did PERSON_A do ACTION_X?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal query, not profile state.
-- query: For how long has PERSON_A been doing ACTIVITY_X in the remembered context?
+- query: How long has PERSON_A been doing ACTIVITY_X?
   confusing_with_backend: streamlined_memory_backend
   reason: Duration query, not static profile.
-- query: What is the relationship between PERSON_A and PERSON_B from memory?
+- query: What is the relationship between PERSON_A and PERSON_B?
   confusing_with_backend: graph_memory_backend
   reason: Entity relation query, not single-person profile.
-- query: Which thing did PERSON_A and PERSON_B have in common?
+- query: What did PERSON_A and PERSON_B have in common?
   confusing_with_backend: graph_memory_backend
   reason: Two-person commonality query.
-- query: Which books has PERSON_A read in this memory case?
+- query: What books has PERSON_A read?
   confusing_with_backend: openviking_memory_backend
   reason: Activity/artifact list, covered by activity_artifact_lookup.
-- query: Which items did PERSON_A buy from stored memories?
+- query: What items did PERSON_A buy?
   confusing_with_backend: openviking_memory_backend
   reason: Activity/artifact list, covered by activity_artifact_lookup.
-- query: Would PERSON_A likely prefer OPTION_A or OPTION_B?
+- query: Would PERSON_A prefer X or Y?
   confusing_with_backend: openviking_memory_backend
   reason: Preference comparison, covered by preference_profile.
 - query: What is PERSON_A's favorite color?
@@ -105,45 +144,42 @@ hard_negatives:
 - query: How does PERSON_A feel about EVENT_X?
   confusing_with_backend: openviking_memory_backend
   reason: Subjective reasoning, covered by subjective_reasoning.
-- query: What reason did PERSON_A decide to do ACTION_X?
+- query: Why did PERSON_A decide to do ACTION_X?
   confusing_with_backend: openviking_memory_backend
   reason: Causal/subjective reasoning.
-- query: What caused EVENT_X from memory?
+- query: What caused EVENT_X?
   confusing_with_backend: graph_memory_backend
   reason: Causal graph query.
-- query: What number of children does PERSON_A have?
+- query: How many children does PERSON_A have?
   confusing_with_backend: openviking_memory_backend
   reason: Count/list fact, covered by count_list_fact.
-- query: What countries has PERSON_A visited from memory?
+- query: Which countries has PERSON_A visited?
   confusing_with_backend: openviking_memory_backend
   reason: Count/list fact, covered by count_list_fact.
-- query: At what time did PERSON_A go to the GROUP_X?
+- query: When did Caroline go to the LGBTQ support group?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal fact, not profile state.
-- query: Which detail is the total cost of my recently purchased headphones and the
-    iPad from memory?
+- query: What is the total cost of my recently purchased headphones and the iPad?
   confusing_with_backend: openviking_memory_backend
   reason: Aggregation query.
-- query: What activities has PERSON_A done with her family?
+- query: What activities has Melanie done with her family?
   confusing_with_backend: graph_memory_backend
-  reason: Involves multiple people ("with her family"), seeking shared activities
-    — graph relation scope.
-- query: How did the extra funding help the school shown in the photo shared by PERSON_A?
+  reason: Involves multiple people ("with her family"), seeking shared activities — graph relation scope.
+- query: What is Caroline's relationship status?
   confusing_with_backend: graph_memory_backend
-  reason: Causal chain involving multiple entities (funding, school, photo), graph
-    scope.
-- query: What creative project do PERSON_A and her kids do together besides pottery?
+  reason: Relationship status is a structural relation fact, better handled by graph backend.
+- query: How did the extra funding help the school shown in the photo shared by John?
   confusing_with_backend: graph_memory_backend
-  reason: Involves multiple people ("Mel and her kids"), seeking shared activity —
-    graph relation.
-- query: What did PERSON_A and her kids paint in their latest project in MONTH_YEAR?
+  reason: Causal chain involving multiple entities (funding, school, photo), graph scope.
+- query: What creative project do Mel and her kids do together besides pottery?
   confusing_with_backend: graph_memory_backend
-  reason: Involves multiple people ("Mel and her kids"), seeking joint creative output
-    — graph scope.
-- query: What kind of painting did PERSON_A share with PERSON_B on DATE_X?
+  reason: Involves multiple people ("Mel and her kids"), seeking shared activity — graph relation.
+- query: What did Mel and her kids paint in their latest project in July 2023?
   confusing_with_backend: graph_memory_backend
-  reason: Social interaction between two people ("share with"), seeking shared content
-    — graph scope.
+  reason: Involves multiple people ("Mel and her kids"), seeking joint creative output — graph scope.
+- query: What kind of painting did Caroline share with Melanie on October 13, 2023?
+  confusing_with_backend: graph_memory_backend
+  reason: Social interaction between two people ("share with"), seeking shared content — graph scope.
 query_spec:
   search_mode: search
   openviking:
@@ -155,9 +191,9 @@ query_spec:
       priority: 1
       target_directories: null
 thresholds:
-  accept: 0.53
+  accept: 0.55
   fallback: 0.45
-  margin: 0.015
+  margin: 0.04
   hard_negative_margin: 0.03
   hard_negative_penalty: 0.15
 calibration:

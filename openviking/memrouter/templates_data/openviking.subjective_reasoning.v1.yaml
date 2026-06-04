@@ -7,146 +7,174 @@ target:
   secondary_backend_ids: []
 intent_family:
   name: subjective_reasoning
-  description: >-
-    Queries that ask for subjective inference about a person's mental state,
-    motivations, likely behavior, or reasoning. These include questions about
-    preferences, feelings, decisions, reactions, personality, and hypothetical
-    choices. Answering requires reasoning over memory evidence rather than
-    direct fact lookup.
-semantic_card: |
-  This template captures queries that ask for SUBJECTIVE INFERENCE about a
-  person's mental state, motivations, or likely behavior.
-
-  Characteristic patterns include:
-  - "Would X prefer A or B?" — hypothetical preference comparison
-  - "Would X likely do Y?" — behavioral prediction
-  - "Would X still want to do Y if Z?" — conditional desire
-  - "Why did X decide to do Y?" — reasoning behind a decision
-  - "How does X feel about Y?" — emotional state inference
-  - "What would X's reaction be?" — predicted response
-  - "What might X say about Y?" — likely statement
-  - "How would X describe their experience?" — subjective framing
-  - "What personality traits might X have?" — trait inference
-  - "What would X likely pursue as a career?" — life trajectory prediction
-  - "Would X enjoy Z?" — enjoyment prediction
-  - "Would X be interested in Y?" — interest inference
-  - "What motivates X to do Y?" — motivation analysis
-  - "What is X's perspective on Y?" — viewpoint inference
-  - "How does X prioritize Y?" — value hierarchy
-
-  These queries require REASONING over memory evidence, not simple fact
-  retrieval. The OpenViking IntentAnalyzer must synthesize multiple pieces
-  of contextual information to infer mental states, motivations, or likely
-  behaviors. skip_intent_analysis is FALSE because these queries demand
-  OV's reasoning capability.
+  description: Queries that ask for subjective inference about a person's mental state,
+    motivations, likely behavior, or reasoning. These include questions about preferences,
+    feelings, decisions, reactions, personality, and hypothetical choices. Answering
+    requires reasoning over memory evidence rather than direct fact lookup.
+semantic_card: Use this template for subjective inference about a person's mental
+  state, motivations, likely behavior, reasoning, feelings, reactions, values, priorities,
+  or qualitative well-being. The answer should require interpreting memory evidence,
+  not merely returning a direct stored profile fact, stated preference/routine, time
+  anchor, count, or structured relation.
 query_prototypes:
-- Would Caroline prefer living in the city or the countryside?
-- Would Melanie likely accept a job offer abroad?
-- Would Caroline still want to become a doctor if she struggled with science?
-- Why did Melanie decide to break up with her boyfriend?
-- How does Caroline feel about her younger sister?
-- What would Melanie's reaction be if she failed her exam?
-- What might Caroline say about her high school experience?
-- How would Melanie describe her first day at university?
-- What personality traits might Caroline have based on her actions?
-- What would Melanie likely pursue as a career after graduation?
-- Would Caroline enjoy attending a classical music concert?
-- Would Melanie be interested in joining a hiking club?
-- What motivates Caroline to study so hard?
-- What is Melanie's perspective on long-distance relationships?
-- How does Caroline prioritize her family versus her career?
-- Would X prefer tea or coffee in the morning?
-- Would X likely move to a new city for a job?
-- Would X still want to learn piano if lessons were expensive?
-- Why did X choose to study engineering instead of medicine?
-- How does X feel about their current job?
-- What would X's reaction be to receiving unexpected criticism?
-- What might X say about their childhood memories?
-- How would X describe their experience traveling alone?
-- What personality traits might X have that explain their generosity?
-- What would X likely do if they won the lottery?
-- Would X enjoy reading science fiction novels?
-- Would X be interested in learning a new language?
-- What motivates X to volunteer every weekend?
-- What is X's perspective on working from home permanently?
-- How does X prioritize saving money versus spending on experiences?
-- Would Caroline be interested in trying extreme sports?
-- What might Melanie say about her relationship with her parents?
-- Why did Caroline decide to switch her major?
-- How would Melanie feel about reconnecting with an old friend?
-- What would likely motivate X to change careers mid-life?
-- Would X prefer a stable routine or spontaneous adventures?
-- What is Caroline's perspective on marriage and family?
-- How does Melanie prioritize her mental health versus her ambitions?
-- Would X likely forgive someone who betrayed their trust?
-- What might X's reaction be to receiving a surprise gift?
-- How would Caroline describe her ideal lifestyle?
-- What personality traits might explain why Melanie is so organized?
-- Would X enjoy living in a small town after years in a big city?
-- What motivates Caroline to maintain her fitness routine?
-- What is Melanie's perspective on taking risks in life?
+- Would PERSON_A prefer living in the city or the countryside?
+- Would PERSON_A likely accept a job offer abroad?
+- Would PERSON_A still want to become a doctor if she struggled with science?
+- Why did PERSON_A decide to break up with her boyfriend?
+- How does PERSON_A feel about her younger sister?
+- What would PERSON_A's reaction be if she failed her exam?
+- What might PERSON_A say about her high school experience?
+- How would PERSON_A describe her first day at university?
+- What personality traits might PERSON_A have based on her actions?
+- What would PERSON_A likely pursue as a career after graduation?
+- Would PERSON_A enjoy attending a classical music concert?
+- Would PERSON_A be interested in joining a hiking club?
+- What motivates PERSON_A to study so hard?
+- What is PERSON_A's perspective on long-distance relationships?
+- How does PERSON_A prioritize her family versus her career?
+- Would PERSON_A prefer tea or coffee in the morning?
+- Would PERSON_A likely move to a new city for a job?
+- Would PERSON_A still want to learn piano if lessons were expensive?
+- Why did PERSON_A choose to study engineering instead of medicine?
+- How does PERSON_A feel about their current job?
+- What would PERSON_A's reaction be to receiving unexpected criticism?
+- What might PERSON_A say about their childhood memories?
+- How would PERSON_A describe their experience traveling alone?
+- What personality traits might PERSON_A have that explain their generosity?
+- What would PERSON_A likely do if they won the lottery?
+- Would PERSON_A enjoy reading science fiction novels?
+- Would PERSON_A be interested in learning a new language?
+- What motivates PERSON_A to volunteer every weekend?
+- What is PERSON_A's perspective on working from home permanently?
+- How does PERSON_A prioritize saving money versus spending on experiences?
+- Would PERSON_A be interested in trying extreme sports?
+- What might PERSON_A say about her relationship with her parents?
+- Why did PERSON_A decide to switch her major?
+- How would PERSON_A feel about reconnecting with an old friend?
+- What would likely motivate PERSON_A to change careers mid-life?
+- Would PERSON_A prefer a stable routine or spontaneous adventures?
+- What is PERSON_A's perspective on marriage and family?
+- How does PERSON_A prioritize her mental health versus her ambitions?
+- Would PERSON_A likely forgive someone who betrayed their trust?
+- What might PERSON_A's reaction be to receiving a surprise gift?
+- How would PERSON_A describe her ideal lifestyle?
+- What personality traits might explain why PERSON_A is so organized?
+- Would PERSON_A enjoy living in a small town after years in a big city?
+- What motivates PERSON_A to maintain her fitness routine?
+- What is PERSON_A's perspective on taking risks in life?
+- Why does PERSON_A regularly visit PLACE_X?
+- Why does PERSON_A prefer working from home?
+- What motivates PERSON_A to exercise every morning?
+- Why does someone sometimes put off doing a routine?
+- Why does someone delay a personal habit?
+- What reasons does someone have for postponing ACTIVITY_X?
+- What is the biggest stressor in PERSON_A's life?
+- How does someone describe a personal experience?
+- What lesson did PERSON_A learn from EVENT_X?
+- How did PERSON_A feel during EVENT_X?
+- What is PERSON_A's source of strength?
+- What is PERSON_A's mood?
+- How is PERSON_A feeling?
+- What is PERSON_A's outlook on life?
+- What is PERSON_A's attitude?
+- What is PERSON_A's stress level?
+- What is PERSON_A's life satisfaction?
+- What is PERSON_A's quality of life?
+- What is PERSON_A's happiness level?
+- What is PERSON_A's well-being?
+- How would you describe PERSON_A's personality?
+- What inspired PERSON_A to start ACTIVITY_X?
+- How did PERSON_A hear about TOPIC_X?
+- What advice did PERSON_A give to PERSON_B regarding TOPIC_X?
+- Why did PERSON_A get ITEM_X on DATE_X?
+- What event did PERSON_A volunteer at?
+- What did PERSON_A do to feel closer to COMMUNITY_X?
 hard_negatives:
-- query: When did Caroline decide to become a doctor?
+- query: When did PERSON_A decide to become a doctor?
   confusing_with_backend: streamlined_memory_backend
   reason: Asks for a temporal decision point, not reasoning about motivation.
-- query: How long has Melanie felt anxious about exams?
+- query: How long has PERSON_A felt anxious about exams?
   confusing_with_backend: streamlined_memory_backend
   reason: Asks for duration of a feeling, not inference about mental state.
-- query: What is Caroline's relationship with her roommate?
+- query: What is PERSON_A's relationship with her roommate?
   confusing_with_backend: graph_memory_backend
   reason: Asks for a relational fact, not subjective inference.
-- query: What do Caroline and Melanie have in common?
+- query: Which things do PERSON_A and PERSON_B have in common?
   confusing_with_backend: graph_memory_backend
   reason: Asks for commonalities between two people, not mental state reasoning.
-- query: What is X's job?
+- query: Which detail is PERSON_A's job from memory?
   confusing_with_backend: openviking_memory_backend
   reason: Direct profile fact lookup; no reasoning about mental state needed.
-- query: What books has Caroline read this year?
+- query: What books has PERSON_A read this year?
   confusing_with_backend: openviking_memory_backend
   reason: Activity artifact enumeration; purely factual retrieval.
-- query: What is Melanie's favorite color?
+- query: Which detail is PERSON_A's favorite color?
   confusing_with_backend: openviking_memory_backend
   reason: Direct preference fact; does not require reasoning.
-- query: How many friends does Caroline have?
+- query: How many friends does PERSON_A have?
   confusing_with_backend: openviking_memory_backend
   reason: Count/list query; no subjective inference required.
-- query: When did X first express interest in art?
+- query: When did PERSON_A first express interest in art?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal query about first expression, not reasoning about motivation.
-- query: How long has X been considering a career change?
+- query: How long has PERSON_A been considering a career change?
   confusing_with_backend: streamlined_memory_backend
   reason: Duration query; seeks temporal span, not mental state inference.
-- query: What is X's relationship with their manager?
+- query: What is PERSON_A's relationship with their manager?
   confusing_with_backend: graph_memory_backend
   reason: Relational fact query; graph memory handles these directly.
-- query: What do X and their sibling disagree about?
+- query: What do PERSON_A and their sibling disagree about?
   confusing_with_backend: graph_memory_backend
   reason: Commonality/difference query; graph memory is better suited.
-- query: What is Caroline's email address?
+- query: What is PERSON_A's email address?
   confusing_with_backend: openviking_memory_backend
   reason: Direct profile attribute; no reasoning whatsoever.
-- query: What movies has Melanie watched recently?
+- query: What movies has PERSON_A watched recently?
   confusing_with_backend: openviking_memory_backend
   reason: Activity enumeration; factual retrieval without inference.
-- query: How many times has X traveled to Japan?
+- query: What number of times has PERSON_A traveled to PLACE_X?
   confusing_with_backend: openviking_memory_backend
   reason: Count query about past activities; no subjective reasoning needed.
-# v5 — multi-entity subjective inference should be graph, not OV
-- query: Which type of vacation would Evan prefer with his family, walking tours in metropolitan cities or camping trip in the outdoors?
+- query: What type of vacation would PERSON_A prefer with his family, walking tours
+    in metropolitan cities or camping trip in the outdoors?
   confusing_with_backend: graph_memory_backend
-  reason: Involves a person + family group; asks about shared/group preference which is a relation/commonality query, not individual subjective inference.
-- query: What would be an appropriate gift for both Evan and Sam to encourage their healthy lifestyles?
+  reason: Involves a person + family group; asks about shared/group preference which
+    is a relation/commonality query, not individual subjective inference.
+- query: What would be an appropriate gift for both PERSON_A and PERSON_B to encourage
+    their healthy lifestyles in the remembered context?
   confusing_with_backend: graph_memory_backend
-  reason: Involves two people and asks about an action benefiting both; this is a co-occurrence/relation inference, not individual mental-state reasoning.
-- query: How might Evan and Sam's experiences with health and lifestyle changes influence their approach to stress and challenges?
+  reason: Involves two people and asks about an action benefiting both; this is a
+    co-occurrence/relation inference, not individual mental-state reasoning.
+- query: How might PERSON_A and PERSON_B's experiences with health and lifestyle changes
+    influence their approach to stress and challenges from memory?
   confusing_with_backend: graph_memory_backend
-  reason: Involves two people and asks about their shared/common approach, not individual subjective inference.
-- query: How do Evan and Sam use creative outlets to cope with life's challenges?
+  reason: Involves two people and asks about their shared/common approach, not individual
+    subjective inference.
+- query: How do PERSON_A and PERSON_B use creative outlets to cope with life's challenges
+    from memory?
   confusing_with_backend: graph_memory_backend
-  reason: Involves two people and asks about their shared/common coping mechanism, which is a relation/commonality query.
-- query: Based on the conversation, did Calvin and Dave have a meeting in Boston between August and November 2023?
+  reason: Involves two people and asks about their shared/common coping mechanism,
+    which is a relation/commonality query.
+- query: Based on the conversation, did PERSON_A and PERSON_B have a meeting in PLACE_X
+    between MONTH_YEAR and MONTH_YEAR?
   confusing_with_backend: graph_memory_backend
-  reason: Involves two people + time range; asks about a shared event (meeting), which is a co-participation/relation query, not subjective inference.
+  reason: Involves two people + time range; asks about a shared event (meeting), which
+    is a co-participation/relation query, not subjective inference.
+- query: How did PERSON_A feel on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Subjective feeling anchored to a date should route to timeline fact.
+- query: How was PERSON_A feeling on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Temporal feeling query with explicit date should route to graph timeline
+    fact, not subjective reasoning.
+- query: What kind of STRESS_X was PERSON_A dealing with in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Temporal fact about stress should route to graph timeline fact, not subjective
+    reasoning.
+- query: How did PERSON_A feel about EVENT_X on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Feeling query anchored to date should route to graph timeline fact, not
+    subjective reasoning.
 query_spec:
   search_mode: search
   openviking:
@@ -158,9 +186,9 @@ query_spec:
       priority: 1
       target_directories: null
 thresholds:
-  accept: 0.52
+  accept: 0.49
   fallback: 0.42
-  margin: 0.04
+  margin: 0.01
   hard_negative_margin: 0.03
   hard_negative_penalty: 0.15
 calibration:

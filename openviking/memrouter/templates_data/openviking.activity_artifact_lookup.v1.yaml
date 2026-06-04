@@ -7,162 +7,295 @@ target:
   secondary_backend_ids: []
 intent_family:
   name: activity_artifact_lookup
-  description: >
-    Queries asking what a person DID, VISITED, READ, BOUGHT, CREATED, ATTENDED,
-    or EXPERIENCED. The focus is on the activity or artifact itself — the concrete
-    action, object, place, or event. This is NOT about when it happened (temporal),
-    NOT about relationships between people (graph), NOT about subjective reasons
-    or feelings (why/how did they feel), NOT about preferences or favorites, and
-    NOT about counts or lists of types.
-semantic_card: |
-  This template routes queries that seek concrete activities, artifacts, or experiences
-  associated with a person. The core intent is "what did they do / what did they interact with."
+  description: 'Queries asking what a person DID, VISITED, READ, BOUGHT, CREATED,
+    ATTENDED, or EXPERIENCED. The focus is on the activity or artifact itself — the
+    concrete action, object, place, or event. This is NOT about when it happened (temporal),
+    NOT about relationships between people (graph), NOT about subjective reasons or
+    feelings (why/how did they feel), NOT about preferences or favorites, and NOT
+    about counts or lists of types.
 
-  IN-SCOPE examples:
-    - "What books has Caroline read?"
-    - "What places did Melanie visit?"
-    - "What did X paint?"
-    - "What concerts has X attended?"
-    - "What food did X eat at the restaurant?"
-    - "What items did X buy?"
-    - "What trips has X taken?"
-    - "What sports has X played?"
-    - "What movies has X watched?"
-    - "What workshops did X attend?"
-
-  OUT-OF-SCOPE (route elsewhere):
-    - Temporal: "When did Caroline read the book?" → streamlined_memory_backend
-    - Duration: "How long has Melanie been reading?" → streamlined_memory_backend
-    - Relationship: "What did Caroline and Melanie do together?" → graph_memory_backend
-    - Commonality: "What activities do Caroline and Melanie share?" → graph_memory_backend
-    - Subjective: "Why did Caroline read that book?" → openviking_memory_backend (subjective)
-    - Preference: "What is Melanie's favorite book?" → openviking_memory_backend (preference)
-    - Count/List: "How many books has Caroline read?" → openviking_memory_backend (count)
-    - Profile: "What is Caroline's reading habit?" → openviking_memory_backend (profile_state)
-
-  Key discriminators:
-    - Contains a person entity and an activity/artifact category.
-    - No temporal anchor (when, last time, recently, before, after, during).
-    - No relationship between multiple people (with, together, both).
-    - No subjective or evaluative language (why, feel, think, opinion).
-    - No quantification (how many, count, total number).
-    - No preference signal (favorite, best, most liked, prefer).
+    '
+semantic_card: "This template routes queries that seek concrete activities, artifacts,\
+  \ or experiences\nassociated with a person. The core intent is \"what did they do\
+  \ / what did they interact with.\"\n\nIN-SCOPE examples:\n  - \"What books has Caroline\
+  \ read?\"\n  - \"What places did Melanie visit?\"\n  - \"What did X paint?\"\n \
+  \ - \"What concerts has X attended?\"\n  - \"What food did X eat at the restaurant?\"\
+  \n  - \"What items did X buy?\"\n  - \"What trips has X taken?\"\n  - \"What sports\
+  \ has X played?\"\n  - \"What movies has X watched?\"\n  - \"What workshops did\
+  \ X attend?\"\n\nOUT-OF-SCOPE (route elsewhere):\n  - Temporal: \"When did Caroline\
+  \ read the book?\" → streamlined_memory_backend\n  - Duration: \"How long has Melanie\
+  \ been reading?\" → streamlined_memory_backend\n  - Relationship: \"What did Caroline\
+  \ and Melanie do together?\" → graph_memory_backend\n  - Commonality: \"What activities\
+  \ do Caroline and Melanie share?\" → graph_memory_backend\n  - Subjective: \"Why\
+  \ did Caroline read that book?\" → openviking_memory_backend (subjective)\n  - Preference:\
+  \ \"What is Melanie's favorite book?\" → openviking_memory_backend (preference)\n\
+  \  - Count/List: \"How many books has Caroline read?\" → openviking_memory_backend\
+  \ (count)\n  - Profile: \"What is Caroline's reading habit?\" → openviking_memory_backend\
+  \ (profile_state)\n\nKey discriminators:\n  - Contains a person entity and an activity/artifact\
+  \ category.\n  - No temporal anchor (when, last time, recently, before, after, during).\n\
+  \  - No relationship between multiple people (with, together, both).\n  - No subjective\
+  \ or evaluative language (why, feel, think, opinion).\n  - No quantification (how\
+  \ many, count, total number).\n  - No preference signal (favorite, best, most liked,\
+  \ prefer).\n"
 query_prototypes:
-- What books has Caroline read?
-- What items did Melanie buy?
-- What places has Caroline visited?
-- What did X paint?
-- What events has Melanie attended?
-- What museums has Caroline been to?
-- What concerts has Melanie been to?
-- What workshops did Caroline attend?
-- What sports has Melanie played?
-- What games has Caroline played?
-- What trips has Melanie taken?
-- What food did Caroline eat?
-- What movies has Melanie watched?
-- What music has Caroline listened to?
-- What articles did Melanie read?
-- What podcasts has Caroline listened to?
-- What courses did Melanie take?
-- What projects has Caroline worked on?
-- What recipes did Melanie try?
-- What restaurants has Caroline been to?
-- What parks has Melanie visited?
-- What exhibitions did Caroline see?
-- What plays has Melanie watched?
-- What hikes has Caroline done?
-- What classes did Melanie sign up for?
-- What apps has Caroline used?
-- What tools did Melanie purchase?
-- What gifts has Caroline received?
-- What donations did Melanie make?
-- What subscriptions has Caroline started?
-- What languages is Melanie learning?
-- What skills has Caroline picked up?
-- What certifications did Melanie earn?
-- What hobbies has Caroline tried?
-- What performances did Melanie see?
-- What festivals has Caroline attended?
-- What hotels did Melanie stay at?
-- What airlines has Caroline flown with?
-- What museums did X visit?
-- What books did X read last year?
-- What movies did X watch?
-- What games did X play?
-- What places did X travel to?
-- What food did X try?
-- What music did X listen to?
+- What books has PERSON_A read?
+- What items did PERSON_A buy?
+- What places has PERSON_A visited?
+- What did PERSON_A paint?
+- What events has PERSON_A attended?
+- What museums has PERSON_A been to?
+- What concerts has PERSON_A been to?
+- What workshops did PERSON_A attend?
+- What sports has PERSON_A played?
+- What games has PERSON_A played?
+- What trips has PERSON_A taken?
+- What food did PERSON_A eat?
+- What movies has PERSON_A watched?
+- What music has PERSON_A listened to?
+- What articles did PERSON_A read?
+- What podcasts has PERSON_A listened to?
+- What courses did PERSON_A take?
+- What projects has PERSON_A worked on?
+- What recipes did PERSON_A try?
+- What restaurants has PERSON_A been to?
+- What parks has PERSON_A visited?
+- What exhibitions did PERSON_A see?
+- What plays has PERSON_A watched?
+- What hikes has PERSON_A done?
+- What classes did PERSON_A sign up for?
+- What apps has PERSON_A used?
+- What tools did PERSON_A purchase?
+- What gifts has PERSON_A received?
+- What donations did PERSON_A make?
+- What subscriptions has PERSON_A started?
+- What languages is PERSON_A learning?
+- What skills has PERSON_A picked up?
+- What certifications did PERSON_A earn?
+- What hobbies has PERSON_A tried?
+- What performances did PERSON_A see?
+- What festivals has PERSON_A attended?
+- What hotels did PERSON_A stay at?
+- What airlines has PERSON_A flown with?
+- What museums did PERSON_A visit?
+- What books did PERSON_A read last year?
+- What movies did PERSON_A watch?
+- What games did PERSON_A play?
+- What places did PERSON_A travel to?
+- What food did PERSON_A try?
+- What music did PERSON_A listen to?
+- What awards has PERSON_A won?
+- What type of APPLICATION_X does PERSON_A plan to build with PERSON_B?
+- Has PERSON_A been to PLACE_X?
+- Who has been the beneficiary of PERSON_A's charity events?
+- What did PERSON_A help ORGANIZATION_X with?
+- What area was affected by NATURAL_DISASTER_X?
+- What items did PERSON_A get for EVENT_X?
+- What CREATIVE_WORK did PERSON_A produce?
 hard_negatives:
-- query: When did Caroline buy the book?
+- query: When did PERSON_A buy the book?
   confusing_with_backend: streamlined_memory_backend
-  reason: Contains temporal anchor "when" seeking a specific time point, not the artifact itself.
-- query: How long has Melanie been reading novels?
+  reason: Contains temporal anchor "when" seeking a specific time point, not the artifact
+    itself.
+- query: How long has PERSON_A been reading novels?
   confusing_with_backend: streamlined_memory_backend
-  reason: Asks for duration (how long), which is a temporal measurement, not an artifact lookup.
-- query: What did Caroline and Melanie do together?
+  reason: Asks for duration (how long), which is a temporal measurement, not an artifact
+    lookup.
+- query: What did PERSON_A and PERSON_B do together?
   confusing_with_backend: graph_memory_backend
-  reason: Involves relationship between two people ("together"), seeking shared activity — graph scope.
-- query: What activities do Caroline and Melanie share?
+  reason: Involves relationship between two people ("together"), seeking shared activity
+    — graph scope.
+- query: What activities do PERSON_A and PERSON_B share?
   confusing_with_backend: graph_memory_backend
-  reason: Asks for commonality between two people ("share"), which is a graph relationship query.
-- query: Why did Caroline read that book?
+  reason: Asks for commonality between two people ("share"), which is a graph relationship
+    query.
+- query: Why did PERSON_A read that book?
   confusing_with_backend: openviking_memory_backend
   reason: Asks for subjective reason/motivation ("why"), not the artifact itself.
-- query: How did Melanie feel about the concert?
+- query: How did PERSON_A feel about the concert?
   confusing_with_backend: openviking_memory_backend
   reason: Seeks subjective feeling/opinion ("feel"), not the activity or artifact.
-- query: What is Caroline's favorite book?
+- query: What is PERSON_A's favorite book?
   confusing_with_backend: openviking_memory_backend
   reason: Contains preference signal ("favorite"), routing to preference template.
-- query: What is Melanie's favorite place to visit?
+- query: What is PERSON_A's favorite PLACE_X to visit?
   confusing_with_backend: openviking_memory_backend
   reason: Preference query with "favorite", not a neutral artifact lookup.
-- query: How many books has Caroline read?
+- query: How many books has PERSON_A read?
   confusing_with_backend: openviking_memory_backend
   reason: Quantification ("how many"), seeking a count rather than artifacts.
-- query: What types of movies does Melanie watch?
+- query: What types of movies does PERSON_A watch from memory?
   confusing_with_backend: openviking_memory_backend
   reason: Asks for categories/types ("types of"), which is a list/count pattern.
-- query: What is Caroline's reading habit?
+- query: What is PERSON_A's reading habit?
   confusing_with_backend: openviking_memory_backend
   reason: Seeks a profile/state description ("habit"), not concrete artifacts.
-- query: What does Melanie usually do on weekends?
+- query: What does PERSON_A usually do on weekends?
   confusing_with_backend: openviking_memory_backend
   reason: Asks for habitual pattern/profile state ("usually"), not specific artifacts.
-- query: When was the last time Caroline visited a museum?
+- query: When was the last time PERSON_A visited a museum?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal anchor ("last time", "when") seeking recency, not the artifact.
-- query: What did Caroline do before she read the book?
+- query: What did PERSON_A do before she read the book?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal sequencing ("before"), seeking prior event in timeline.
-- query: What places has Caroline visited with Melanie?
+- query: What places has PERSON_A visited with PERSON_B?
   confusing_with_backend: graph_memory_backend
-  reason: Involves two people ("with Melanie"), seeking co-visited places — graph scope.
-- query: When did Melanie run a charity race?
+  reason: Involves two people ("with Melanie"), seeking co-visited places — graph
+    scope.
+- query: At what time did PERSON_A run a charity race?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal anchor "when" seeking event timestamp, not the activity itself.
-- query: When is Melanie planning on going camping?
+- query: When is PERSON_A planning on going camping?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal planning query with "when", seeking future timestamp.
-- query: When did Caroline give a speech at a school?
+- query: When did PERSON_A give a speech at a school?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal anchor "when" seeking event time, not the speech content.
-- query: When did Melanie sign up for a pottery class?
+- query: When did PERSON_A sign up for a pottery class?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal query with "when did...sign up", seeking registration time.
-- query: When did Caroline have a picnic?
+- query: When did PERSON_A have a picnic?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal query with "when did", seeking event timestamp.
-- query: When did Melanie go to the pottery workshop?
+- query: When did PERSON_A go to the pottery workshop?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal query with "when did...go to", seeking attendance time.
-- query: How long has Caroline had her current group of friends for?
+- query: How long has PERSON_A had her current group of friends for?
   confusing_with_backend: streamlined_memory_backend
   reason: Duration query "how long", seeking temporal span not activity.
-- query: How long ago was Caroline's 18th birthday?
+- query: How long ago was PERSON_A's 18th birthday?
   confusing_with_backend: streamlined_memory_backend
   reason: Temporal recency query, seeking elapsed time not event detail.
+- query: What did PERSON_A do on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Query has a specific date anchor; should route to graph.timeline_fact.v1.
+- query: What ARTIFACT_X did PERSON_A do recently on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query, not a neutral artifact lookup.
+- query: What ACTIVITY_X was PERSON_A doing in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query, not neutral artifact lookup.
+- query: What ACTIVITY_X did PERSON_A do with PERSON_B on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored co-activity query, not neutral artifact lookup.
+- query: What ACTIVITY_X did PERSON_A do on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query should route to graph timeline, not neutral
+    artifact lookup.
+- query: What did PERSON_A do with PERSON_B?
+  confusing_with_backend: graph_memory_backend
+  reason: Co-activity with another person implies relation query, not single-artifact
+    lookup.
+- query: When did PERSON_A visit PLACE_X for the first time?
+  confusing_with_backend: graph_memory_backend
+  reason: Timestamp lookup, not artifact.
+- query: How many times has PERSON_A visited PLACE_X?
+  confusing_with_backend: openviking_memory_backend
+  reason: Count query, not artifact.
+- query: What EVENT_X did PERSON_A accomplish in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored event fact, not neutral artifact lookup.
+- query: What kind of ARTIFACT_X did PERSON_A make in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored creation fact, not neutral artifact lookup.
+- query: What ITEM_X did PERSON_A purchase on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored purchase query should route to timeline fact.
+- query: What ITEM_X did PERSON_A recently use on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored artifact query should route to timeline fact.
+- query: What kind of places have PERSON_A and PERSON_B checked out around the city?
+  confusing_with_backend: graph_memory_backend
+  reason: Co-activity query between two people should route to graph entity relation,
+    not single-person artifact lookup.
+- query: When did PERSON_A go to PLACE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Temporal query asking when should route to graph timeline, not artifact
+    lookup.
+- query: What game did PERSON_A play on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query should route to graph timeline, not neutral
+    artifact lookup.
+- query: What movie did PERSON_A watch on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query should route to graph timeline, not neutral
+    artifact lookup.
+- query: What kind of frosting did PERSON_A use on the cake on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query should route to graph timeline, not neutral
+    artifact lookup.
+- query: When did PERSON_A do ACTION_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Temporal query should route to graph timeline fact, not activity artifact.
+- query: What game has PERSON_A been playing on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored ongoing activity query should route to graph timeline fact.
+- query: What ITEM_X did PERSON_A recently watch and recommend?
+  confusing_with_backend: graph_memory_backend
+  reason: Recommendation activity with temporal recency, not neutral artifact list.
+- query: What type of ACTIVITY_X did PERSON_A sign up for in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored enrollment query, not neutral artifact lookup.
+- query: What ACTIVITY_X did PERSON_A do during TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query should route to graph timeline fact.
+- query: What game did PERSON_A play in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query should route to graph timeline fact.
+- query: What event did PERSON_A attend in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored event query should route to graph timeline fact.
+- query: What milestone did PERSON_A achieve on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored achievement query should route to graph timeline fact.
+- query: What is the name of ITEM_X PERSON_A tried in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored artifact query should route to graph timeline fact, not neutral
+    artifact lookup.
+- query: What game did PERSON_A play at EVENT_X in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query with event context should route to graph timeline
+    fact.
+- query: What date did PERSON_A do ACTION_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Temporal anchor query should route to graph timeline fact, not artifact
+    lookup.
+- query: What ACTIVITY_X did PERSON_A do in MONTH_YEAR?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query should route to graph timeline fact, not neutral
+    artifact lookup.
+- query: What ACTIVITY_X did PERSON_A do with PERSON_B?
+  confusing_with_backend: graph_memory_backend
+  reason: Co-activity query with another person should route to graph entity relation,
+    not single-artifact lookup.
+- query: What game did PERSON_A play at EVENT_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time- and event-anchored activity query should route to graph timeline fact,
+    not neutral artifact lookup.
+- query: What movie did PERSON_A watch during EVENT_X in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time- and event-anchored activity query should route to graph timeline fact,
+    not neutral artifact lookup.
+- query: What ARTIFACT_X did PERSON_A show to PERSON_B on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored social relation query should route to graph entity relation
+    or timeline fact.
+- query: What type of EVENT_X did PERSON_A sign up for in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored event type query should route to graph timeline fact, not
+    activity artifact lookup.
+- query: Where did PERSON_A go on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored location query should route to graph timeline fact, not activity
+    artifact lookup.
+- query: What did PERSON_A do during TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query should route to graph timeline fact, not neutral
+    artifact lookup.
+- query: Where has PERSON_A been on ACTIVITY_X with PERSON_B?
+  confusing_with_backend: graph_memory_backend
+  reason: Co-activity query with another person should route to graph entity relation
+    or timeline fact, not single-person artifact lookup.
 query_spec:
   search_mode: search
   openviking:
@@ -174,9 +307,9 @@ query_spec:
       priority: 1
       target_directories: null
 thresholds:
-  accept: 0.54
+  accept: 0.5
   fallback: 0.44
-  margin: 0.04
+  margin: 0.02
   hard_negative_margin: 0.03
   hard_negative_penalty: 0.15
 calibration:

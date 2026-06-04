@@ -7,116 +7,194 @@ target:
   secondary_backend_ids: []
 intent_family:
   name: count_list_fact
-  description: Queries asking for a COUNT, LIST, or ENUMERATION of items. The answer is a list or a quantity, not a single fact, not a timestamp, not a subjective inference. "How many...?" asks for a count. "What types...?" "Which books/bands/items...?" "What are some...?" ask for a list. This is distinct from personal_fact_lookup (single fact), streamlined_memory_backend (temporal queries), and subjective_reasoning (opinion/explanation queries).
-semantic_card: |
-  This template matches queries where the user wants an enumeration or count of items from memory.
+  description: Queries asking for a COUNT, LIST, or ENUMERATION of items. The answer
+    is a list or a quantity, not a single fact, not a timestamp, not a subjective
+    inference. "How many...?" asks for a count. "What types...?" "Which books/bands/items...?"
+    "What are some...?" ask for a list. This is distinct from personal_fact_lookup
+    (single fact), streamlined_memory_backend (temporal queries), and subjective_reasoning
+    (opinion/explanation queries).
+semantic_card: 'This template matches queries where the user wants an enumeration
+  or count of items from memory.
+
 
   Key patterns:
-  - Count queries: "How many..." → expects a number (how many children, how many times, how many books)
-  - List queries: "What types/which/what are some..." → expects a list (which bands, what hobbies, what languages)
+
+  - Count queries: "How many..." → expects a number (how many children, how many times,
+  how many books)
+
+  - List queries: "What types/which/what are some..." → expects a list (which bands,
+  what hobbies, what languages)
+
   - Enumeration: "What does X collect/own/have..." → expects an inventory or set
 
+
   What this is NOT:
-  - NOT a single fact lookup ("What is X's favorite book?" → personal_fact_lookup or preference)
-  - NOT a temporal query ("How many days between X and Y?" "How many times in 2023?" → streamlined)
-  - NOT a subjective inference ("Why did X read Y?" "What does X think about...?" → subjective_reasoning)
-  - NOT a profile state query ("What is X's job?" "Where does X live?" → profile_state)
+
+  - NOT a single fact lookup ("What is X''s favorite book?" → personal_fact_lookup
+  or preference)
+
+  - NOT a temporal query ("How many days between X and Y?" "How many times in 2023?"
+  → streamlined)
+
+  - NOT a subjective inference ("Why did X read Y?" "What does X think about...?"
+  → subjective_reasoning)
+
+  - NOT a profile state query ("What is X''s job?" "Where does X live?" → profile_state)
+
   - NOT a relation query ("What do X and Y have in common?" → graph_memory_backend)
 
+
   The answer form is always plural or numeric: a list, a set, a count, an enumeration.
+
+  '
 query_prototypes:
-- How many children does X have?
-- How many times has X traveled to Japan?
-- How many books has X read this year?
-- How many concerts has X attended?
-- How many pets does X have?
-- How many languages does X speak?
-- How many instruments does X play?
-- What types of music does X listen to?
-- What types of food does X like?
-- What types of movies does X watch?
-- What types of exercise does X do?
-- Which books has X read?
-- Which bands has X listened to?
-- Which movies has X watched?
-- Which countries has X visited?
-- Which restaurants has X been to?
-- What items has X bought recently?
-- What products does X use?
-- What tools does X work with?
-- What are some places X has visited?
-- What are some hobbies X has?
-- What are some skills X has?
-- What are some achievements X has made?
-- What are some challenges X has faced?
-- What hobbies does X have?
-- What instruments does X play?
-- What languages does X speak?
-- What skills does X have?
-- What pets does X have?
-- What are X's favorite foods?
-- What are X's career goals?
-- What are X's achievements?
-- What challenges has X faced?
-- What activities does X do?
-- What are X's interests?
-- What does X collect?
-- What does X own?
-- What does X have in their collection?
-- What sports does X play?
-- What games does X play?
-- What courses has X taken?
-- What projects has X worked on?
-- What certifications does X hold?
-- What awards has X won?
-- What medications does X take?
-- What allergies does X have?
+- How many children does PERSON_A have?
+- How many times has PERSON_A traveled to PLACE_X?
+- How many books has PERSON_A read this year?
+- How many concerts has PERSON_A attended?
+- How many pets does PERSON_A have?
+- How many languages does PERSON_A speak?
+- How many instruments does PERSON_A play?
+- What types of music does PERSON_A listen to?
+- What types of food does PERSON_A like?
+- What types of movies does PERSON_A watch?
+- What types of exercise does PERSON_A do?
+- Which books has PERSON_A read?
+- Which bands has PERSON_A listened to?
+- Which movies has PERSON_A watched?
+- Which countries has PERSON_A visited?
+- Which restaurants has PERSON_A been to?
+- What items has PERSON_A bought recently?
+- What products does PERSON_A use?
+- What tools does PERSON_A work with?
+- What are some places PERSON_A has visited?
+- What are some hobbies PERSON_A has?
+- What are some skills PERSON_A has?
+- What are some achievements PERSON_A has made?
+- What are some challenges PERSON_A has faced?
+- What hobbies does PERSON_A have?
+- What instruments does PERSON_A play?
+- What languages does PERSON_A speak?
+- What skills does PERSON_A have?
+- What are PERSON_A's favorite foods?
+- What are PERSON_A's career goals?
+- What are PERSON_A's achievements?
+- What challenges has PERSON_A faced?
+- What activities does PERSON_A do?
+- What are PERSON_A's interests?
+- What does PERSON_A collect?
+- What does PERSON_A own?
+- What does PERSON_A have in their collection?
+- What sports does PERSON_A play?
+- What games does PERSON_A play?
+- What courses has PERSON_A taken?
+- What certifications does PERSON_A hold?
+- What awards has PERSON_A won?
+- What medications does PERSON_A take?
+- What allergies does PERSON_A have?
 hard_negatives:
-- query: How many days are there between X's birthday and Y's birthday?
+- query: How many days are there between PERSON_A's birthday and PERSON_B's birthday?
   confusing_with_backend: streamlined_memory_backend
-  reason: Asks for a duration/computation between two dates, not a count of items from memory. Requires temporal calculation.
-- query: How many times has X gone to the gym in 2024?
+  reason: Asks for a duration/computation between two dates, not a count of items
+    from memory. Requires temporal calculation.
+- query: How many times has PERSON_A gone to the gym in YEAR_X?
   confusing_with_backend: streamlined_memory_backend
-  reason: Contains "how many times" but has a strong temporal anchor ("in 2024") that makes it a time-bounded frequency query best handled by streamlined backend.
-- query: How many years has X worked at Y?
+  reason: Contains "how many times" but has a strong temporal anchor ("in 2024") that
+    makes it a time-bounded frequency query best handled by streamlined backend.
+- query: How many years has PERSON_A worked at PERSON_B?
   confusing_with_backend: streamlined_memory_backend
-  reason: Asks for a duration derived from temporal boundaries (start date to present), not an enumeration from memory.
-- query: What do X and Y have in common?
+  reason: Asks for a duration derived from temporal boundaries (start date to present),
+    not an enumeration from memory.
+- query: Which things do PERSON_A and PERSON_B have in common in the remembered context?
   confusing_with_backend: graph_memory_backend
-  reason: Asks for shared attributes between two entities, which is a relation/intersection query, not a list from a single entity's memory.
-- query: What is X's favorite book?
+  reason: Asks for shared attributes between two entities, which is a relation/intersection
+    query, not a list from a single entity's memory.
+- query: Which detail is PERSON_A's favorite book?
   confusing_with_backend: openviking_memory_backend
-  reason: Although about books, asks for a single preference item, not a list or count. Maps to personal_fact_lookup or preference template.
-- query: Why did X read "War and Peace"?
+  reason: Although about books, asks for a single preference item, not a list or count.
+    Maps to personal_fact_lookup or preference template.
+- query: Why did PERSON_A read "BOOK_TITLE"?
   confusing_with_backend: openviking_memory_backend
-  reason: Asks for subjective reasoning/motivation behind an action, not a list or count of items.
-- query: What is X's job?
+  reason: Asks for subjective reasoning/motivation behind an action, not a list or
+    count of items.
+- query: Which detail is PERSON_A's job?
   confusing_with_backend: openviking_memory_backend
-  reason: Asks for a single profile state attribute, not an enumeration. Maps to profile_state template.
-- query: What did X buy at the store yesterday?
+  reason: Asks for a single profile state attribute, not an enumeration. Maps to profile_state
+    template.
+- query: What did PERSON_A buy at the store yesterday?
   confusing_with_backend: openviking_memory_backend
-  reason: Contains "what did X buy" but has a specific temporal anchor ("yesterday") and asks for a single event's details, not a general list of purchased items.
-- query: Where does X live?
+  reason: Contains "what did X buy" but has a specific temporal anchor ("yesterday")
+    and asks for a single event's details, not a general list of purchased items.
+- query: Where does PERSON_A live from memory?
   confusing_with_backend: openviking_memory_backend
-  reason: Asks for a single location fact, not a list or count. Maps to profile_state template.
-- query: What is X's opinion on climate change?
+  reason: Asks for a single location fact, not a list or count. Maps to profile_state
+    template.
+- query: What is PERSON_A's opinion on climate change?
   confusing_with_backend: openviking_memory_backend
-  reason: Asks for a subjective opinion, not an enumeration. Maps to subjective_reasoning template.
-- query: When did X start learning piano?
+  reason: Asks for a subjective opinion, not an enumeration. Maps to subjective_reasoning
+    template.
+- query: When did PERSON_A start learning piano?
   confusing_with_backend: streamlined_memory_backend
   reason: Asks for a specific timestamp/event time, not a list or count.
-- query: How long did X stay in Paris?
+- query: How long did PERSON_A stay in PLACE_X?
   confusing_with_backend: streamlined_memory_backend
   reason: Asks for a duration, not a count of items or a list.
-- query: Who introduced X to jazz music?
+- query: Who introduced PERSON_A to jazz music?
   confusing_with_backend: graph_memory_backend
-  reason: Asks for a specific relationship/connection between entities, not an enumeration from memory.
-- query: What makes X happy?
+  reason: Asks for a specific relationship/connection between entities, not an enumeration
+    from memory.
+- query: What makes PERSON_A happy?
   confusing_with_backend: openviking_memory_backend
-  reason: Asks for subjective emotional drivers, not a concrete list or count. Maps to subjective_reasoning.
-- query: Is X married?
+  reason: Asks for subjective emotional drivers, not a concrete list or count. Maps
+    to subjective_reasoning.
+- query: Is it true that PERSON_A married?
   confusing_with_backend: openviking_memory_backend
-  reason: Asks for a binary profile state fact, not a list or count. Maps to profile_state template.
+  reason: Asks for a binary profile state fact, not a list or count. Maps to profile_state
+    template.
+- query: How many times has PERSON_A gone to PLACE_X in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-bounded frequency query should route to graph timeline fact.
+- query: How many TIMES_UNIT did PERSON_A do ACTION_X in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-bounded frequency query should route to graph timeline fact, not count
+    list.
+- query: How many times has PERSON_A done ACTION_X in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-bounded frequency query should route to graph timeline fact.
+- query: What ACTIVITY_X has PERSON_A been doing on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query, not count/list.
+- query: How many people attended EVENT_X in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Event attendance count with time context, not general enumeration.
+- query: How many times has PERSON_A attended EVENT_X in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-bounded frequency query should route to graph timeline fact, not count
+    list.
+- query: What game has PERSON_A been playing on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query should route to graph timeline fact, not count/list.
+- query: What ACTIVITY_X is PERSON_A currently doing on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Current activity with date anchor should route to graph timeline fact.
+- query: What ACTIVITY_X did PERSON_A do on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-anchored activity query should route to graph timeline fact, not count/list.
+- query: What ITEM_X did PERSON_A have at age AGE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Personal possession fact with age context should route to graph timeline
+    fact, not count/list.
+- query: How many TIMES_UNIT did PERSON_A do ACTIVITY_X in TIME_PERIOD?
+  confusing_with_backend: graph_memory_backend
+  reason: Time-bounded frequency query should route to graph timeline fact, not count
+    list fact.
+- query: What ITEM_X did PERSON_A share with PERSON_B on DATE_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Shared item query between two people should route to graph entity relation,
+    not count/list.
+- query: When did PERSON_A do ACTION_X?
+  confusing_with_backend: graph_memory_backend
+  reason: Temporal query should route to graph timeline fact, not count/list.
 query_spec:
   search_mode: search
   openviking:
@@ -130,9 +208,8 @@ query_spec:
 thresholds:
   accept: 0.53
   fallback: 0.43
-  margin: 0.04
+  margin: 0.02
   hard_negative_margin: 0.03
-  hard_negative_penalty: 0.15
   hard_negative_penalty: 0.06
 calibration:
   min_positive_examples: 25
