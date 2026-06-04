@@ -170,6 +170,14 @@
         }
         .bar-baseline { background: #6c757d; }
         .bar-treatment { background: var(--primary); }
+        .bar-warning { background: var(--warning); }
+        .text-danger { color: var(--danger); }
+        .text-success { color: var(--success); }
+        .text-secondary { color: var(--text-secondary); }
+        .row-subtotal { background: #f8f9fa; }
+        .row-total { font-weight: 600; background: #e9ecef; }
+        .row-highlight { font-weight: 600; background: var(--success-light); }
+        .bar-label { width: 80px; font-size: 0.85rem; display: inline-block; }
     </style>
 </head>
 <body>
@@ -288,39 +296,60 @@
                     <th class="numeric">Treatment v2</th>
                 </tr>
                 <tr>
-                    <td>Bot 回答生成 tokens</td>
-                    <td class="numeric">~2,579,399</td>
-                    <td class="numeric">2,579,399</td>
-                    <td class="numeric">2,314,089</td>
-                    <td class="numeric">2,648,419</td>
+                    <td>Bot prompt tokens（输入）</td>
+                    <td class="numeric">2,403,898</td>
+                    <td class="numeric">2,525,367</td>
+                    <td class="numeric">2,256,817</td>
+                    <td class="numeric">2,589,812</td>
                 </tr>
                 <tr>
-                    <td>IntentAnalyzer tokens</td>
+                    <td>Bot completion tokens（输出）</td>
+                    <td class="numeric">54,967</td>
+                    <td class="numeric">54,032</td>
+                    <td class="numeric">57,272</td>
+                    <td class="numeric">58,607</td>
+                </tr>
+                <tr class="row-subtotal">
+                    <td><strong>Bot 回答生成合计</strong></td>
+                    <td class="numeric"><strong>2,458,865</strong></td>
+                    <td class="numeric"><strong>2,579,399</strong></td>
+                    <td class="numeric"><strong>2,314,089</strong></td>
+                    <td class="numeric"><strong>2,648,419</strong></td>
+                </tr>
+                <tr>
+                    <td>IntentAnalyzer tokens（Routing）</td>
                     <td class="numeric">~122,850</td>
                     <td class="numeric">~122,850</td>
                     <td class="numeric">0</td>
                     <td class="numeric">0</td>
                 </tr>
                 <tr>
-                    <td>LLM Fallback tokens</td>
+                    <td>LLM Fallback tokens（Routing）</td>
                     <td class="numeric">0</td>
                     <td class="numeric">0</td>
                     <td class="numeric">~37,558</td>
                     <td class="numeric">~9,187</td>
                 </tr>
-                <tr style="font-weight: 600; background: #f8f9fa;">
-                    <td>总 LLM tokens</td>
-                    <td class="numeric">~2,702,249</td>
-                    <td class="numeric">~2,702,249</td>
-                    <td class="numeric">2,351,647</td>
-                    <td class="numeric">2,657,606</td>
+                <tr class="row-highlight">
+                    <td><strong>Routing 节省 (vs IntentAnalyzer)</strong></td>
+                    <td class="numeric"><strong>—</strong></td>
+                    <td class="numeric"><strong>—</strong></td>
+                    <td class="numeric"><strong>85,292 (69.4%)</strong></td>
+                    <td class="numeric"><strong>113,663 (92.5%)</strong></td>
+                </tr>
+                <tr class="row-total">
+                    <td><strong>总 LLM tokens</strong></td>
+                    <td class="numeric"><strong>~2,581,715</strong></td>
+                    <td class="numeric"><strong>~2,702,249</strong></td>
+                    <td class="numeric"><strong>2,351,647</strong></td>
+                    <td class="numeric"><strong>2,657,606</strong></td>
                 </tr>
                 <tr>
-                    <td>Routing tokens 占比</td>
-                    <td class="numeric">~4.5%</td>
-                    <td class="numeric">~4.5%</td>
+                    <td>Routing tokens 占比 <small class="text-secondary">（排除 Bot completion）</small></td>
+                    <td class="numeric">~4.9%</td>
+                    <td class="numeric">~4.6%</td>
                     <td class="numeric">1.6%</td>
-                    <td class="numeric">0.3%</td>
+                    <td class="numeric">0.4%</td>
                 </tr>
             </table>
 
@@ -347,14 +376,14 @@
             <p>以 Baseline 为例，总 token 消耗构成如下：</p>
 
             <div class="comparison-bar">
-                <span style="width: 80px; font-size: 0.85rem;">Baseline</span>
-                <div class="bar bar-baseline" style="width: 95.5%">Bot 95.5%</div>
-                <div class="bar" style="width: 4.5%; background: var(--warning);">IntentAnalyzer 4.5%</div>
+                <span class="bar-label">Baseline</span>
+                <div class="bar bar-baseline" style="width:95.5%">Bot 95.5%</div>
+                <div class="bar bar-warning" style="width:4.5%">IntentAnalyzer 4.5%</div>
             </div>
             <div class="comparison-bar">
-                <span style="width: 80px; font-size: 0.85rem;">Treatment</span>
-                <div class="bar bar-treatment" style="width: 99.7%">Bot 99.7%</div>
-                <div class="bar" style="width: 0.3%; background: var(--warning);">Fallback 0.3%</div>
+                <span class="bar-label">Treatment</span>
+                <div class="bar bar-treatment" style="width:99.7%">Bot 99.7%</div>
+                <div class="bar bar-warning" style="width:0.3%">Fallback 0.3%</div>
             </div>
 
             <h3>3.2 为什么节省有限？</h3>
@@ -378,16 +407,32 @@
                 </tr>
             </table>
 
-            <h3>3.3 量化分析</h3>
+            <h3>3.3 Token 节省量化分析</h3>
+
+            <h4>视角 A：纯意图识别（Routing）阶段</h4>
             <table>
-                <tr><th>场景</th><th class="numeric">Token 消耗</th><th class="numeric">占比</th></tr>
-                <tr><td>Baseline 总消耗</td><td class="numeric">~2,702,249</td><td class="numeric">100%</td></tr>
-                <tr><td>&nbsp;&nbsp;Bot 回答生成</td><td class="numeric">2,579,399</td><td class="numeric">95.5%</td></tr>
-                <tr><td>&nbsp;&nbsp;IntentAnalyzer (81次)</td><td class="numeric">~122,850</td><td class="numeric">4.5%</td></tr>
-                <tr style="border-top: 2px solid var(--border);"><td>Treatment v2 总消耗</td><td class="numeric">2,657,606</td><td class="numeric">100%</td></tr>
-                <tr><td>&nbsp;&nbsp;Bot 回答生成</td><td class="numeric">2,648,419</td><td class="numeric">99.7%</td></tr>
-                <tr><td>&nbsp;&nbsp;LLM Fallback (22次)</td><td class="numeric">~9,187</td><td class="numeric">0.3%</td></tr>
+                <tr><th>项目</th><th class="numeric">Baseline</th><th class="numeric">Treatment v2</th><th class="numeric">节省</th></tr>
+                <tr><td>IntentAnalyzer 消耗</td><td class="numeric">~122,850 (81 次)</td><td class="numeric">0</td><td class="numeric">—</td></tr>
+                <tr><td>Fallback 消耗</td><td class="numeric">0</td><td class="numeric">~9,187 (22 次)</td><td class="numeric">—</td></tr>
+                <tr class="row-highlight"><td><strong>Routing 阶段净节省</strong></td><td class="numeric">~122,850</td><td class="numeric">~9,187</td><td class="numeric"><strong>113,663 (92.5%)</strong></td></tr>
             </table>
+            <p><small>注：59/81 题通过模板匹配零 token 路由；22 题触发 Fallback，平均 418 tokens/次。</small></p>
+
+            <h4>视角 B：整体链路（排除 Bot 输出 / completion）</h4>
+            <table>
+                <tr><th>项目</th><th class="numeric">Baseline</th><th class="numeric">Treatment v2</th><th class="numeric">差异</th></tr>
+                <tr><td>Bot prompt tokens</td><td class="numeric">2,525,367</td><td class="numeric">2,589,812</td><td class="numeric text-danger">+64,445</td></tr>
+                <tr><td>Routing tokens</td><td class="numeric">~122,850</td><td class="numeric">~9,187</td><td class="numeric text-success">−113,663</td></tr>
+                <tr class="row-subtotal"><td><strong>非 Bot-completion 合计</strong></td><td class="numeric">2,648,217</td><td class="numeric">2,598,999</td><td class="numeric"><strong>−49,218 (1.9%)</strong></td></tr>
+            </table>
+            <p><small>注：Bot prompt 增加主要因 Graph 查询返回更多上下文；Routing 节省被 Bot prompt 增量部分抵消。</small></p>
+
+            <h4>视角 C：整体链路（排除全部 Bot tokens）</h4>
+            <table>
+                <tr><th>项目</th><th class="numeric">Baseline</th><th class="numeric">Treatment v2</th><th class="numeric">节省</th></tr>
+                <tr><td>非 Bot 部分（仅 Routing）</td><td class="numeric">~122,850</td><td class="numeric">~9,187</td><td class="numeric"><strong>113,663 (92.5%)</strong></td></tr>
+            </table>
+            <p><small>注：若仅关注 MemRouter 可优化的范围，Routing 阶段节省 92.5%；Bot 回答生成不受 MemRouter 影响。</small></p>
 
             <div class="insight">
                 <strong>核心结论</strong>：MemRouter 确实<strong>消除了 IntentAnalyzer 的 token 消耗</strong>（81次 &times; 1,500 tokens），并通过模板匹配实现了 59/81 题的零 token 路由。但由于 Bot 回答生成是 token 消耗的绝对大头（95%+），这一节省在总成本中<strong>仅占约 4%</strong>，反映在 DeepSeek 平台上仅为<strong>几分钱的差距</strong>。<br><br>
